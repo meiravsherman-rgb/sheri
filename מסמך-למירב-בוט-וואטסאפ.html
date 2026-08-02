@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בוט WhatsApp חכם לשיטת שרמן</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: #f5f5f5;
+            color: #2d2d2d;
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+        }
+        .header {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            padding: 40px 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content { padding: 30px 40px 50px; }
+
+        h2 {
+            font-size: 22px;
+            color: #128C7E;
+            margin: 35px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+        h2:first-child { margin-top: 0; }
+
+        h3 {
+            font-size: 18px;
+            color: #333;
+            margin: 20px 0 10px;
+        }
+        p { margin-bottom: 12px; }
+
+        .highlight-box {
+            background: #e8f5e9;
+            border-right: 4px solid #25D366;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+        .warning-box {
+            background: #fff3e0;
+            border-right: 4px solid #ff9800;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-right: 4px solid #2196f3;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+
+        ul, ol { padding-right: 25px; margin-bottom: 12px; }
+        li { margin-bottom: 6px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        th {
+            background: #128C7E;
+            color: white;
+            padding: 10px 12px;
+            text-align: right;
+            font-weight: 600;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: top;
+        }
+        tr:nth-child(even) { background: #fafafa; }
+        tr:hover { background: #f0f0f0; }
+
+        .total-row td {
+            font-weight: 700;
+            background: #e8f5e9 !important;
+            border-top: 2px solid #128C7E;
+        }
+        .free { color: #25D366; font-weight: 600; }
+
+        .flow-diagram {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 15px;
+        }
+        .flow-step {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 20px;
+            margin: 5px auto;
+            max-width: 400px;
+            display: block;
+        }
+        .flow-arrow {
+            color: #25D366;
+            font-size: 22px;
+            margin: 3px 0;
+            display: block;
+        }
+
+        .steps-timeline {
+            position: relative;
+            margin: 20px 0;
+        }
+        .step-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+        .step-number {
+            background: #128C7E;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .step-content {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+        .step-content strong { color: #128C7E; }
+        .step-tag {
+            display: inline-block;
+            background: #e0e0e0;
+            color: #555;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .step-tag.merav { background: #e8f5e9; color: #2e7d32; }
+        .step-tag.dev { background: #e3f2fd; color: #1565c0; }
+        .step-tag.both { background: #fff3e0; color: #e65100; }
+
+        .supabase-demo {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .supabase-demo table {
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .supabase-demo .step-label {
+            display: inline-block;
+            background: #128C7E;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 13px;
+            margin-left: 6px;
+        }
+
+        .faq-item {
+            margin-bottom: 15px;
+        }
+        .faq-q {
+            font-weight: 700;
+            color: #128C7E;
+            margin-bottom: 3px;
+        }
+        .faq-a { color: #555; }
+
+        .next-steps {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .next-steps h2 {
+            color: #2e7d32;
+            border-bottom-color: #a5d6a7;
+        }
+
+        .footer {
+            background: #333;
+            color: #aaa;
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        strong { color: inherit; }
+        .green { color: #25D366; }
+
+        @media (max-width: 600px) {
+            .content { padding: 20px; }
+            .header { padding: 25px 20px; }
+            .header h1 { font-size: 22px; }
+            table { font-size: 13px; }
+            td, th { padding: 7px 8px; }
+        }
+
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+            .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>בוט WhatsApp חכם לשיטת שרמן</h1>
+        <div class="subtitle">מסמך הצגת פרויקט | יולי 2026</div>
+    </div>
+
+    <div class="content">
+
+        <!-- מה בונים -->
+        <h2>מה בונים?</h2>
+        <p>בוט WhatsApp חכם שעונה ללקוחות ולידים <strong>24/7</strong> בצורה טבעית ואישית.</p>
+        <p>הבוט מבוסס על בינה מלאכותית (AI) - הוא לא תפריט קבוע ("הקש 1 ל...") אלא <strong>שיחה חופשית</strong> כמו עם בן אדם.</p>
+
+        <div class="highlight-box">
+            <strong>מה הבוט יודע לעשות:</strong>
+            <ul>
+                <li>לענות על שאלות על שיטת שרמן בשפה חמה ואמפתית</li>
+                <li>להסביר על כל הקורסים (דיגיטליים, פרונטליים, מדריכות)</li>
+                <li>לענות על שאלות נפוצות (למי מתאים, איך עובד, כמה עולה)</li>
+                <li>להוביל לקוח מתעניין להרשמה, שיחה, או פגישה</li>
+                <li>להעביר למירב כשצריך (שאלה מורכבת, בקשה מיוחדת)</li>
+                <li>לזכור לקוחות חוזרים ואת ההיסטוריה שלהם</li>
+            </ul>
+        </div>
+
+        <p><strong>מה הבוט לא יעשה:</strong> לא ייתן ייעוץ רפואי, לא יבטיח ריפוי, ולא ידבר על נושאים שלא קשורים לעסק.</p>
+
+        <!-- איך עובד -->
+        <h2>איך זה עובד?</h2>
+        <div class="flow-diagram">
+            <span class="flow-step">לקוחה שולחת הודעה ב-WhatsApp</span>
+            <span class="flow-arrow">&#8595;</span>
+            <span class="flow-step">WhatsApp מעביר את ההודעה לשרת בענן</span>
+            <span class="flow-arrow">&#8595;</span>
+            <span class="flow-step">השרת שולח ל-AI עם כל הידע על השיטה</span>
+            <span class="flow-arrow">&#8595;</span>
+            <span class="flow-step">ה-AI מנסח תשובה מותאמת אישית</span>
+            <span class="flow-arrow">&#8595;</span>
+            <span class="flow-step">התשובה נשלחת חזרה ללקוחה ב-WhatsApp</span>
+            <span class="flow-arrow">&#8595;</span>
+            <span class="flow-step">השיחה נשמרת בבסיס נתונים לזיכרון</span>
+        </div>
+        <p style="text-align:center; color:#888;">הכל קורה <strong style="color:#128C7E">בשניות</strong>, הכל <strong style="color:#128C7E">אוטומטי</strong>, הכל <strong style="color:#128C7E">24/7</strong>.</p>
+
+        <!-- חשבונות -->
+        <h2>מה צריך לפתוח?</h2>
+        <p>חשבונות שמירב פותחת (עם הדרכה שלב אחרי שלב):</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>מה</th>
+                    <th>למה צריך</th>
+                    <th>עלות</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td><strong>מספר טלפון SECNUM</strong></td>
+                    <td>המספר שהלקוחות ישלחו אליו הודעות. מספר נפרד מהמספר האישי של מירב</td>
+                    <td>18 ₪/חודש</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>Meta Business Suite</strong></td>
+                    <td>חובה של WhatsApp - Meta (פייסבוק) דורשת אימות עסק כדי להשתמש ב-API הרשמי. תהליך אונליין פשוט</td>
+                    <td class="free">חינם</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>Meta Developer App</strong></td>
+                    <td>החיבור הטכני בין הבוט ל-WhatsApp. נפתח דרך אתר המפתחים של פייסבוק</td>
+                    <td class="free">חינם</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>Anthropic</strong></td>
+                    <td>"המוח" של הבוט. חברת AI שמספקת את המודל שמבין שאלות ומנסח תשובות. <strong>בלי זה הבוט לא יכול לנהל שיחה חופשית</strong></td>
+                    <td>33-55 ₪/חודש ($9-15)</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>Supabase</strong></td>
+                    <td>בסיס נתונים בענן - שומר שיחות, לקוחות, ומאגר הידע. <strong>גם מאפשר למירב לעדכן מחירים וקורסים לבד</strong></td>
+                    <td class="free">חינם</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td><strong>GitHub</strong></td>
+                    <td>מחסן הקוד בענן. מאפשר גיבוי, <strong>והעברה למפתח אחר בעתיד</strong> אם תרצי</td>
+                    <td class="free">חינם</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td><strong>Render</strong></td>
+                    <td>השרת בענן שמריץ את הבוט 24/7. בלעדיו הבוט לא עובד כשהמחשב כבוי</td>
+                    <td>26 ₪/חודש ($7)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <strong>מה לא צריך:</strong> לא צריך אתר חדש, לא דומיין, לא ידע טכני. לא צריך לשלם ל-WhatsApp עבור שיחות שירות (לקוח שפונה = חינם!). רפי מטפל בכל הטכנולוגיה.
+        </div>
+
+        <!-- עלויות -->
+        <h2>עלות חודשית מוערכת</h2>
+
+        <h3>תרחיש בסיסי (~10 שיחות ביום, בלי הודעות שיווק)</h3>
+        <table>
+            <thead>
+                <tr><th>רכיב</th><th>עלות חודשית</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>מספר טלפון (SECNUM)</td><td>18 ₪</td></tr>
+                <tr><td>שרת בענן (Render)</td><td>~26 ₪ ($7)</td></tr>
+                <tr><td>AI - מוח הבוט (Anthropic)</td><td>~33-55 ₪ ($9-15)</td></tr>
+                <tr><td>WhatsApp - שיחות שירות</td><td class="free">0 ₪ (חינם!)</td></tr>
+                <tr><td>בסיס נתונים (Supabase)</td><td class="free">0 ₪</td></tr>
+                <tr class="total-row"><td><strong>סה"כ</strong></td><td><strong>~77-99 ₪/חודש</strong></td></tr>
+            </tbody>
+        </table>
+
+        <h3>אם הנפח גדל</h3>
+        <table>
+            <thead>
+                <tr><th>תרחיש</th><th>עלות חודשית</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>~25 שיחות ביום + 200 הודעות שיווק</td><td><strong>~130-170 ₪ ($36-46)</strong></td></tr>
+                <tr><td>~50 שיחות ביום + 500 הודעות שיווק</td><td><strong>~245-290 ₪ ($67-79)</strong></td></tr>
+            </tbody>
+        </table>
+
+        <div class="warning-box">
+            <strong>חשוב לדעת:</strong> WhatsApp לא גובה על שיחות שירות (לקוח ששולח הודעה ואתם עונים תוך 24 שעות). תשלום רק על הודעות שיווק שאתם יוזמים (כמו "היי, יש לנו קורס חדש!") - כ-14 אגורות להודעה.
+        </div>
+
+        <!-- שלבי עבודה -->
+        <h2>שלבי העבודה</h2>
+        <div class="steps-timeline">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>הכנה - פתיחת חשבונות</strong>
+                    <p>פותחים את כל החשבונות מהטבלה למעלה. אני אדריך אותך שלב שלב.</p>
+                    <p>כמה זמן: 1-2 שעות עבודה + 1-3 ימים המתנה לאימות Meta.</p>
+                    <span class="step-tag merav">מירב</span>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>מאגר ידע - איסוף כל המידע</strong>
+                    <p>אוספים את כל המידע שהבוט צריך לדעת: הסבר על השיטה, פרטי הקורסים (מחיר, תוכן, איך נרשמים), שאלות נפוצות + תשובות, סגנון הדיבור, מתי להעביר למירב.</p>
+                    <p><strong>זה השלב הכי חשוב</strong> - ככל שהמידע מדויק יותר, הבוט טוב יותר. אכין שאלון מובנה.</p>
+                    <span class="step-tag both">מירב + רפי</span>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>אפיון - הגדרת "האישיות" של הבוט</strong>
+                    <p>שם, סגנון דיבור, גבולות. מירב מאשרת לפני שממשיכים.</p>
+                    <span class="step-tag both">מירב + רפי</span>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>בנייה - כתיבת הקוד</strong>
+                    <p>כתיבת הקוד, חיבור לכל השירותים, בניית הבוט.</p>
+                    <p>מירב לא צריכה לעשות כלום בשלב הזה.</p>
+                    <span class="step-tag dev">רפי</span>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>בדיקות</strong>
+                    <p>שולחים הודעות לבוט, בודקים שהתשובות נכונות ובסגנון הנכון, מתקנים.</p>
+                    <span class="step-tag both">מירב + רפי</span>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <strong>השקה!</strong>
+                    <p>הבוט עולה לאוויר. מתחילים לקבל הודעות מלקוחות.</p>
+                    <span class="step-tag merav">מירב</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- תחזוקה -->
+        <h2>תחזוקה עצמאית - מה מירב יכולה לעשות לבד</h2>
+
+        <h3>עדכון מחירים, קורסים, או מידע</h3>
+        <p>מאגר הידע של הבוט שמור בטבלה פשוטה באינטרנט (Supabase). אפשר להיכנס ולערוך אותו כמו טבלת Excel:</p>
+
+        <div class="supabase-demo">
+            <p><span class="step-label">1</span> נכנסים ל-supabase.com והתחברות</p>
+            <p><span class="step-label">2</span> בוחרים את הפרויקט ← Table Editor ← טבלת knowledge_base</p>
+            <p><span class="step-label">3</span> רואים טבלה פשוטה:</p>
+            <table>
+                <thead><tr><th>מפתח</th><th>תוכן</th><th>עודכן ב</th></tr></thead>
+                <tbody>
+                    <tr><td>courses</td><td>"קורס דיגיטלי: 490₪, קורס פרונטלי..."</td><td>12.7.2026</td></tr>
+                    <tr><td>faq</td><td>"שאלה: מה זה שיטת שרמן? תשובה:..."</td><td>12.7.2026</td></tr>
+                    <tr><td>prices</td><td>"קורס מדריכות: 12,000₪..."</td><td>12.7.2026</td></tr>
+                </tbody>
+            </table>
+            <p style="margin-top:12px"><span class="step-label">4</span> לוחצים על התא, משנים, שומרים</p>
+            <p><span class="step-label">5</span> <strong style="color:#25D366">תוך 5 דקות הבוט משתמש במידע החדש!</strong></p>
+            <p style="color:#888; font-size:14px; margin-top:10px;">* אכין מדריך מצולם (עם צילומי מסך) לשלב הזה.</p>
+        </div>
+
+        <h3>מה עוד אפשר לעשות לבד:</h3>
+        <ul>
+            <li>לראות היסטוריית שיחות עם לקוחות</li>
+            <li>לקבל התראות email אם הבוט נפל</li>
+            <li>לדווח על תשובות שגויות (ורפי מתקן)</li>
+        </ul>
+
+        <h3>מה דורש את רפי:</h3>
+        <ul>
+            <li>שינוי בהתנהגות הבוט (כמו: "שיהיה פחות רשמי")</li>
+            <li>הוספת יכולות חדשות (כמו: חיבור ליומן גוגל)</li>
+            <li>טיפול בתקלות טכניות</li>
+        </ul>
+
+        <!-- עצמאות -->
+        <h2>עצמאות מלאה - הכל שלך</h2>
+
+        <div class="highlight-box">
+            <strong>הקוד שייך לך</strong>
+            <p>כל הקוד שמור ב-GitHub תחת החשבון שלך. אם מחר תרצי לעבוד עם מישהו אחר - הוא יכול לגשת לקוד ולהמשיך מאיפה שהפסקנו. אין "נעילה" לאף אחד. הקוד מתועד וברור.</p>
+        </div>
+
+        <div class="highlight-box">
+            <strong>כל החשבונות על שם מירב</strong>
+            <p>Anthropic, Render, Supabase, GitHub, Meta - הכל רשום על שמך. אין תלות במחשב של רפי, אין תלות בארנק של רפי. את שולטת בכל ההוצאות.</p>
+        </div>
+
+        <div class="highlight-box">
+            <strong>גיבוי אוטומטי</strong>
+            <p>הקוד מגובה ב-GitHub. בסיס הנתונים מגובה אוטומטית (גיבוי שבועי). אם משהו נופל - הכל חוזר תוך דקות.</p>
+        </div>
+
+        <!-- אבטחה -->
+        <h2>פרטיות ואבטחה</h2>
+        <ul>
+            <li><strong>WhatsApp הרשמי:</strong> שימוש ב-API הרשמי של Meta (לא שירות צד שלישי) - אין חשש לחסימת המספר</li>
+            <li><strong>הצפנה:</strong> כל ההודעות מוצפנות (WhatsApp + הצפנת בסיס נתונים)</li>
+            <li><strong>פרטיות:</strong> הבוט שולח הודעת פרטיות בשיחה ראשונה, לקוחות יכולים לבקש מחיקת מידע</li>
+            <li><strong>ציות לחוק:</strong> תואם לחוק הגנת הפרטיות הישראלי</li>
+        </ul>
+
+        <!-- שאלות נפוצות -->
+        <h2>שאלות נפוצות</h2>
+
+        <div class="faq-item">
+            <div class="faq-q">ש: מה קורה אם הבוט עונה תשובה לא נכונה?</div>
+            <div class="faq-a">ת: אפשר לעדכן את המידע בטבלה (5 דקות, לבד) או לבקש מרפי לשנות את ההתנהגות.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">ש: מה קורה אם יש תקלה?</div>
+            <div class="faq-a">ת: מירב מקבלת התראה אוטומטית ב-email. ברוב המקרים השרת מתאושש לבד תוך דקות.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">ש: האם צריך מחשב דלוק?</div>
+            <div class="faq-a">ת: לא. הכל בענן. הבוט עובד 24/7 גם כשכל המחשבים כבויים.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">ש: האם הבוט מחליף אותי?</div>
+            <div class="faq-a">ת: לא. הבוט עונה על שאלות בסיסיות ומוביל להרשמה. שאלות מורכבות, נושאים רגישים, או בקשות מיוחדות - הבוט מעביר אלייך.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">ש: מה אם ארצה להוסיף יכולות בעתיד?</div>
+            <div class="faq-a">ת: אפשר. למשל: חיבור ליומן גוגל (קביעת פגישות מהבוט), שליחת מיילים, הודעות שיווק. כל אלה אפשריים כשלבים הבאים.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">ש: מה אם ארצה להחליף מפתח?</div>
+            <div class="faq-a">ת: הכל שמור ב-GitHub תחת החשבון שלך. כל מפתח אחר יכול להמשיך.</div>
+        </div>
+
+        <!-- שלב הבא -->
+        <div class="next-steps">
+            <h2>מה השלב הבא?</h2>
+            <ol>
+                <li><strong>מירב פותחת את החשבונות</strong> (עם הדרכה שלב אחרי שלב)</li>
+                <li><strong>מירב ממלאת את שאלון מאגר הידע</strong> (השאלון יישלח)</li>
+                <li><strong>רפי בונה את הבוט</strong> ומירב בודקת ומאשרת</li>
+                <li><strong>השקה!</strong></li>
+            </ol>
+            <p style="margin-top: 15px;"><strong>זמן משוער עד בוט עובד:</strong> כ-3 שבועות (תלוי בזמן אימות Meta ובמהירות מילוי מאגר הידע).</p>
+        </div>
+
+        <!-- תוכנית גדולה -->
+        <h2>מבט קדימה - התוכנית הגדולה</h2>
+        <div class="info-box">
+            <strong>הבוט הוא שלב 1 בלבד.</strong>
+            <p>המטרה הגדולה היא לבנות מערכת שלמה שבה אף ליד לא הולך לאיבוד:</p>
+            <ul style="margin-top:8px">
+                <li><strong>שלב 1 (עכשיו):</strong> בוט WhatsApp חכם - מענה ללקוחות, מידע, הובלה למכירה</li>
+                <li><strong>שלב 2:</strong> חיבור ל-CRM - כל ליד שפונה נכנס למערכת ניהול לקוחות</li>
+                <li><strong>שלב 3:</strong> מערכת Follow-Up אוטומטית - לידים שלא השלימו הרשמה מקבלים מעקב</li>
+                <li><strong>שלב 4:</strong> משפך שיווקי מלא - מ"שמעתי על השיטה" ועד "נרשמתי לקורס"</li>
+            </ul>
+            <p style="margin-top:8px">כל שלב נבנה על הקודם. הבוט שנבנה עכשיו יהיה הבסיס לכל המערכת.</p>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        מסמך הצגת פרויקט | בוט WhatsApp לשיטת שרמן | יולי 2026
+    </div>
+</div>
+
+</body>
+</html>
