@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import (
@@ -76,10 +75,17 @@ async def api_reset(req: ResetRequest):
     return {"status": "ok"}
 
 
-# Serve static files (chat simulator UI)
+# Serve chat simulator UI
 _static_dir = Path(__file__).parent / "static"
-if _static_dir.exists():
-    app.mount("/simulator", StaticFiles(directory=str(_static_dir), html=True), name="static")
+
+
+@app.get("/simulator", response_class=Response)
+@app.get("/simulator/", response_class=Response)
+async def simulator():
+    index = _static_dir / "index.html"
+    if index.exists():
+        return Response(content=index.read_text(encoding="utf-8"), media_type="text/html")
+    return Response(content="Simulator not found", status_code=404)
 
 
 @app.get("/health")
