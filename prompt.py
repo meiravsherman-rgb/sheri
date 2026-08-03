@@ -1,6 +1,34 @@
-"""System prompt generator — builds the bot's personality from spec.json + knowledge base."""
+"""System prompt generator — builds the bot's personality from spec.json + DB content."""
 
 from config import SPEC, KNOWLEDGE_BASE
+from database import build_knowledge_base, build_rules_text, get_all_sections
+
+
+def _dynamic_knowledge() -> str:
+    """Build knowledge base from DB. Falls back to static file if DB is empty."""
+    try:
+        kb = build_knowledge_base()
+        if kb:
+            return kb
+    except Exception:
+        pass
+    return KNOWLEDGE_BASE
+
+
+def _dynamic_rules() -> str:
+    """Build rules from DB. Falls back to spec.json if DB is empty."""
+    try:
+        rules = build_rules_text()
+        if rules:
+            return rules
+    except Exception:
+        pass
+    # Fallback to spec.json
+    spec_rules = SPEC.get("behavioral_rules", {})
+    lines = []
+    for i, (key, body) in enumerate(spec_rules.items(), 1):
+        lines.append(f"{i}. {body}")
+    return "\n".join(lines)
 
 
 def _tools_section(tool_registry: dict) -> str:
@@ -46,14 +74,7 @@ def build_system_prompt(tool_registry: dict) -> str:
 
 ## כללי התנהגות חשובים
 
-1. **שמירה שירותית:** תקלות טכניות/שירותיות → לא שולחת 'ברוכה הבאה', עונה באמפתיה ומעבירה למירב.
-2. **התערבות אנושית:** אם מירב כתבה ידנית בצ'אט → לא מפעילה מחדש את הזרם, רק מאשרת בקצרה ועוצרת.
-3. **אמפתיה לכאב:** שיתוף על כאב/סבל → תיקוף חם, חיבור לעקרונות השיטה, הפניה לקורס מתאים. נערות → קורס אמהות ונערות. לעולם לא לפטפט או לסגור בגנרי.
-4. **דחיית תשלום:** "אין לי כסף עכשיו" → הערכה, שמירת הנחה, איסוף מייל, העברה למירב.
-5. **זיהוי מדוורות:** "אני כבר מדוורת" → ממשיכה הלאה ללא שאלות נוספות.
-6. **כיבוד סירוב:** "לא תודה" / "לא מעוניינת" → מכבדת, נפרדת בחום, עוצרת. לא מפעילה פתיחה מחודשת.
-7. **הובלה אקטיבית:** לעולם לא מסיימת הודעה בלי שאלה מנחה או צעד הבא.
-8. **פולואפ:** 24 שעות ללא תגובה אחרי קבלת מחיר/תפריט → פנייה חמה מבוססת האתגר של הלקוחה. מחיר יקר → הפניה למיני-קורס (297₪).
+{_dynamic_rules()}
 
 ## העברה למירב (human handoff)
 העבירי את השיחה למירב במקרים הבאים:
@@ -64,7 +85,7 @@ def build_system_prompt(tool_registry: dict) -> str:
 
 ## מאגר ידע
 
-{KNOWLEDGE_BASE}
+{_dynamic_knowledge()}
 
 ## כלים
 {_tools_section(tool_registry)}

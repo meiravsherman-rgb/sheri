@@ -3,7 +3,6 @@
 import hashlib
 import hmac
 import logging
-import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -16,6 +15,8 @@ from config import (
     WHATSAPP_VERIFY_TOKEN,
 )
 from database import init_db, is_seen, mark_seen
+from admin import router as admin_router
+from seed_db import seed
 from tools.whatsapp import send_reply, mark_as_read
 
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +27,7 @@ logger = logging.getLogger("sheri")
 async def lifespan(app: FastAPI):
     # Startup
     init_db()
+    seed()  # Populate admin tables if empty
     # Import tools to populate TOOL_REGISTRY
     import tools.human_handoff  # noqa: F401
     import tools.reminders  # noqa: F401
@@ -38,6 +40,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="שרי הבוטית", lifespan=lifespan)
+app.include_router(admin_router)
 
 
 # ── Chat simulator API ────────────────────────────────────────────
@@ -67,11 +70,8 @@ async def api_chat(req: ChatRequest):
 @app.post("/api/reset")
 async def api_reset(req: ResetRequest):
     """Clear conversation history for a phone number."""
-    from config import DATABASE_PATH
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.execute("DELETE FROM conversations WHERE chat_id = ?", (req.phone,))
-    conn.commit()
-    conn.close()
+    from database import _get_client
+    _get_client().table("conversations").delete().eq("chat_id", req.phone).execute()
     return {"status": "ok"}
 
 

@@ -22,8 +22,9 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "anthropic")
 LLM_MODEL = os.getenv("LLM_MODEL", "claude-haiku-4-5-20251001")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
-# ── Database ───────────────────────────────────────────────────────
-DATABASE_PATH = os.getenv("DATABASE_PATH", "data/conversations.db")
+# ── Supabase ───────────────────────────────────────────────────────
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 MAX_HISTORY = int(os.getenv("MAX_HISTORY", "20"))
 
 # ── Manager ────────────────────────────────────────────────────────

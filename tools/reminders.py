@@ -6,11 +6,10 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
-from config import DATABASE_PATH
 from tools import TOOL_REGISTRY
 
 # ── Scheduler setup ────────────────────────────────────────────────
-_jobstore_url = f"sqlite:///{DATABASE_PATH}"
+_jobstore_url = "sqlite:///data/apscheduler.db"
 _scheduler = BackgroundScheduler(
     jobstores={"default": SQLAlchemyJobStore(url=_jobstore_url)},
     job_defaults={"misfire_grace_time": 3600},
