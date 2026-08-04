@@ -68,8 +68,12 @@ async def api_chat(req: ChatRequest):
     """Chat simulator endpoint — same agent, no WhatsApp."""
     try:
         upsert_lead_from_message(req.phone, req.name)
-        from agent import handle_message
+        from agent import handle_message, generate_ai_summary
         reply = handle_message(req.phone, req.name, req.message)
+        try:
+            generate_ai_summary(req.phone)
+        except Exception:
+            pass
         return {"reply": reply}
     except Exception as e:
         logger.error(f"Chat API error: {e}", exc_info=True)
@@ -213,10 +217,15 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
 
     # Process with agent
     try:
-        from agent import handle_message
+        from agent import handle_message, generate_ai_summary
         reply = handle_message(sender_phone, sender_name, text)
         send_reply(sender_phone, reply)
         logger.info(f"Reply sent to {sender_phone}: {reply[:50]}...")
+        # Auto-generate AI conversation summary
+        try:
+            generate_ai_summary(sender_phone)
+        except Exception as e:
+            logger.warning(f"AI summary failed: {e}")
     except Exception as e:
         logger.error(f"Error processing message from {sender_phone}: {e}", exc_info=True)
         try:

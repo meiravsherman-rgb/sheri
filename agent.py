@@ -1,11 +1,15 @@
 """LLM agent — handles a single incoming message and returns a reply."""
 
+import logging
+
 import anthropic
 
 from config import ANTHROPIC_API_KEY, LLM_MODEL, MAX_HISTORY
-from database import append, tail
+from database import append, tail, get_lead_conversations, update_lead
 from prompt import build_system_prompt
 from tools import TOOL_REGISTRY
+
+logger = logging.getLogger("sheri")
 
 # Tools whose chat_id must be overridden from the webhook context
 FRAMEWORK_INJECTED_CHAT_ID = {
@@ -117,3 +121,29 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
     reply = "אני מטפלת בבקשה שלך. אם את צריכה עזרה נוספת, אשמח לעזור 🌸"
     append(chat_id, "assistant", reply)
     return reply
+
+
+def generate_ai_summary(chat_id: str) -> None:
+    """Generate an AI summary of the conversation and save to lead.ai_summary."""
+    try:
+        convos = get_lead_conversations(chat_id, limit=30)
+        if not convos:
+            return
+
+        convo_text = "\n".join(
+            f"{'לקוחה' if m['role']=='user' else 'שרי'}: {m['content']}"
+            for m in convos[-20:]  # last 20 messages
+        )
+
+        response = _client.messages.create(
+            model=LLM_MODEL,
+            max_tokens=300,
+            system="את מסכמת שיחות בקצרה בעברית. תני סיכום עסקי תמציתי: מה הלקוחה רוצה, מה הוצע לה, מה הסטטוס, ומה הצעד הבא. 2-3 משפטים מקסימום.",
+            messages=[{"role": "user", "content": f"סכמי את השיחה הזו:\n\n{convo_text}"}],
+        )
+
+        summary = response.content[0].text.strip()
+        if summary:
+            update_lead(chat_id, ai_summary=summary)
+    except Exception as e:
+        logger.warning(f"AI summary failed for {chat_id}: {e}")
