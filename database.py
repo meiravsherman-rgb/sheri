@@ -1,19 +1,28 @@
-"""Supabase storage — conversations + admin content management."""
+"""Supabase storage via REST API — conversations + admin content management."""
 
 from datetime import datetime, timezone
 
-from supabase import create_client
+import httpx
 
 from config import SUPABASE_URL, SUPABASE_KEY
 
-_client = None
+_headers = None
 
 
-def _get_client():
-    global _client
-    if _client is None:
-        _client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    return _client
+def _get_headers() -> dict:
+    global _headers
+    if _headers is None:
+        _headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        }
+    return _headers
+
+
+def _url(table: str) -> str:
+    return f"{SUPABASE_URL}/rest/v1/{table}"
 
 
 def _now() -> str:
@@ -21,154 +30,145 @@ def _now() -> str:
 
 
 def init_db() -> None:
-    """No-op — tables are managed in Supabase."""
-    _get_client()
+    """Verify Supabase connection."""
+    r = httpx.get(_url("courses"), headers=_get_headers(), params={"select": "id", "limit": "1"})
+    r.raise_for_status()
 
 
 # ── Conversations ─────────────────────────────────────────────────
 
 def append(chat_id: str, role: str, content: str) -> None:
-    _get_client().table("conversations").insert({
-        "chat_id": chat_id,
-        "role": role,
-        "content": content,
-        "created_at": _now(),
-    }).execute()
+    httpx.post(_url("conversations"), headers=_get_headers(), json={
+        "chat_id": chat_id, "role": role, "content": content, "created_at": _now(),
+    }).raise_for_status()
 
 
 def tail(chat_id: str, n: int = 20) -> list[dict]:
-    result = (_get_client().table("conversations")
-              .select("role, content")
-              .eq("chat_id", chat_id)
-              .order("id", desc=True)
-              .limit(n)
-              .execute())
-    rows = result.data or []
-    return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+    r = httpx.get(_url("conversations"), headers=_get_headers(), params={
+        "select": "role,content",
+        "chat_id": f"eq.{chat_id}",
+        "order": "id.desc",
+        "limit": str(n),
+    })
+    r.raise_for_status()
+    rows = r.json()
+    return [{"role": row["role"], "content": row["content"]} for row in reversed(rows)]
 
 
 # ── Message dedup ─────────────────────────────────────────────────
 
 def is_seen(message_id: str) -> bool:
-    result = (_get_client().table("seen_messages")
-              .select("message_id")
-              .eq("message_id", message_id)
-              .limit(1)
-              .execute())
-    return len(result.data or []) > 0
+    r = httpx.get(_url("seen_messages"), headers=_get_headers(), params={
+        "select": "message_id",
+        "message_id": f"eq.{message_id}",
+        "limit": "1",
+    })
+    r.raise_for_status()
+    return len(r.json()) > 0
 
 
 def mark_seen(message_id: str) -> None:
-    (_get_client().table("seen_messages")
-     .upsert({"message_id": message_id, "created_at": _now()})
-     .execute())
+    headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
+    httpx.post(_url("seen_messages"), headers=headers, json={
+        "message_id": message_id, "created_at": _now(),
+    }).raise_for_status()
 
 
 # ── FAQ CRUD ───────────────────────────────────────────────────────
 
 def get_all_faq() -> list[dict]:
-    result = (_get_client().table("faq")
-              .select("*")
-              .order("sort_order")
-              .order("id")
-              .execute())
-    return result.data or []
+    r = httpx.get(_url("faq"), headers=_get_headers(), params={
+        "select": "*", "order": "sort_order,id",
+    })
+    r.raise_for_status()
+    return r.json()
 
 
 def upsert_faq(faq_id: int | None, question: str, answer: str, sort_order: int = 0) -> int:
     now = _now()
     if faq_id:
-        (_get_client().table("faq")
-         .update({"question": question, "answer": answer, "sort_order": sort_order, "updated_at": now})
-         .eq("id", faq_id)
-         .execute())
+        httpx.patch(_url("faq"), headers=_get_headers(), params={"id": f"eq.{faq_id}"}, json={
+            "question": question, "answer": answer, "sort_order": sort_order, "updated_at": now,
+        }).raise_for_status()
         return faq_id
     else:
-        result = (_get_client().table("faq")
-                  .insert({"question": question, "answer": answer, "sort_order": sort_order, "updated_at": now})
-                  .execute())
-        return result.data[0]["id"]
+        r = httpx.post(_url("faq"), headers=_get_headers(), json={
+            "question": question, "answer": answer, "sort_order": sort_order, "updated_at": now,
+        })
+        r.raise_for_status()
+        return r.json()[0]["id"]
 
 
 def delete_faq(faq_id: int) -> None:
-    _get_client().table("faq").delete().eq("id", faq_id).execute()
+    httpx.delete(_url("faq"), headers=_get_headers(), params={"id": f"eq.{faq_id}"}).raise_for_status()
 
 
 # ── Courses CRUD ───────────────────────────────────────────────────
 
 def get_all_courses() -> list[dict]:
-    result = (_get_client().table("courses")
-              .select("*")
-              .order("sort_order")
-              .order("id")
-              .execute())
-    return result.data or []
+    r = httpx.get(_url("courses"), headers=_get_headers(), params={
+        "select": "*", "order": "sort_order,id",
+    })
+    r.raise_for_status()
+    return r.json()
 
 
 def upsert_course(course_id: int | None, **fields) -> int:
-    now = _now()
-    fields["updated_at"] = now
+    fields["updated_at"] = _now()
     if course_id:
-        (_get_client().table("courses")
-         .update(fields)
-         .eq("id", course_id)
-         .execute())
+        httpx.patch(_url("courses"), headers=_get_headers(), params={"id": f"eq.{course_id}"}, json=fields).raise_for_status()
         return course_id
     else:
-        result = (_get_client().table("courses")
-                  .insert(fields)
-                  .execute())
-        return result.data[0]["id"]
+        r = httpx.post(_url("courses"), headers=_get_headers(), json=fields)
+        r.raise_for_status()
+        return r.json()[0]["id"]
 
 
 def delete_course(course_id: int) -> None:
-    _get_client().table("courses").delete().eq("id", course_id).execute()
+    httpx.delete(_url("courses"), headers=_get_headers(), params={"id": f"eq.{course_id}"}).raise_for_status()
 
 
 # ── Content Sections CRUD ─────────────────────────────────────────
 
 def get_all_sections() -> list[dict]:
-    result = (_get_client().table("content_sections")
-              .select("*")
-              .order("id")
-              .execute())
-    return result.data or []
+    r = httpx.get(_url("content_sections"), headers=_get_headers(), params={
+        "select": "*", "order": "id",
+    })
+    r.raise_for_status()
+    return r.json()
 
 
 def get_section(section_key: str) -> dict | None:
-    result = (_get_client().table("content_sections")
-              .select("*")
-              .eq("section_key", section_key)
-              .limit(1)
-              .execute())
-    rows = result.data or []
+    r = httpx.get(_url("content_sections"), headers=_get_headers(), params={
+        "select": "*", "section_key": f"eq.{section_key}", "limit": "1",
+    })
+    r.raise_for_status()
+    rows = r.json()
     return rows[0] if rows else None
 
 
 def upsert_section(section_key: str, title: str, body: str) -> None:
-    now = _now()
-    (_get_client().table("content_sections")
-     .upsert({"section_key": section_key, "title": title, "body": body, "updated_at": now},
-             on_conflict="section_key")
-     .execute())
+    headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
+    httpx.post(_url("content_sections"), headers=headers, json={
+        "section_key": section_key, "title": title, "body": body, "updated_at": _now(),
+    }).raise_for_status()
 
 
 # ── Rules CRUD ─────────────────────────────────────────────────────
 
 def get_all_rules() -> list[dict]:
-    result = (_get_client().table("rules")
-              .select("*")
-              .order("id")
-              .execute())
-    return result.data or []
+    r = httpx.get(_url("rules"), headers=_get_headers(), params={
+        "select": "*", "order": "id",
+    })
+    r.raise_for_status()
+    return r.json()
 
 
 def upsert_rule(rule_key: str, title: str, body: str, is_active: bool = True) -> None:
-    now = _now()
-    (_get_client().table("rules")
-     .upsert({"rule_key": rule_key, "title": title, "body": body, "is_active": is_active, "updated_at": now},
-             on_conflict="rule_key")
-     .execute())
+    headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
+    httpx.post(_url("rules"), headers=headers, json={
+        "rule_key": rule_key, "title": title, "body": body, "is_active": is_active, "updated_at": _now(),
+    }).raise_for_status()
 
 
 # ── Build knowledge base from DB ──────────────────────────────────

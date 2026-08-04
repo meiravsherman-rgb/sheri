@@ -70,8 +70,9 @@ async def api_chat(req: ChatRequest):
 @app.post("/api/reset")
 async def api_reset(req: ResetRequest):
     """Clear conversation history for a phone number."""
-    from database import _get_client
-    _get_client().table("conversations").delete().eq("chat_id", req.phone).execute()
+    from database import _url, _get_headers
+    import httpx
+    httpx.delete(_url("conversations"), headers=_get_headers(), params={"chat_id": f"eq.{req.phone}"}).raise_for_status()
     return {"status": "ok"}
 
 
