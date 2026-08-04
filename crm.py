@@ -34,6 +34,7 @@ class LeadUpdate(BaseModel):
     notes: str | None = None
     next_followup: str | None = None
     name: str | None = None
+    conversation_summary: str | None = None
 
 class NewLead(BaseModel):
     phone: str
@@ -723,6 +724,7 @@ async function openLead(phone) {
           <label>הערות</label>
           <textarea onblur="updateField('${phone}','notes',this.value)">${lead.notes||''}</textarea>
         </div>
+        ${lead.conversation_summary ? '<div style="margin-top:.5rem;padding:.6rem .8rem;background:var(--pink-bg);border-radius:10px;border-right:3px solid var(--pink);font-size:.85rem"><strong>סיכום שיחה:</strong> '+lead.conversation_summary+'</div>' : ''}
         <div style="text-align:center;color:#bbb;font-size:.78rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f5f5f5">
           קשר ראשון: ${fmtDate(lead.first_contact)} &bull; סה"כ שולם: ${lead.total_paid||0}₪
         </div>
@@ -748,6 +750,10 @@ async function openLead(phone) {
 
       <!-- Chat tab -->
       <div id="mtab-chat" class="hidden">
+        <div class="field-group" style="margin-bottom:1rem">
+          <label style="font-weight:600;color:var(--pink)">סיכום שיחה</label>
+          <textarea style="min-height:60px;background:var(--pink-bg);border-color:var(--pink-light)" placeholder="מה יצא מהשיחה? למה מחכים? מה הצעד הבא?" onblur="updateField('${phone}','conversation_summary',this.value)">${lead.conversation_summary||''}</textarea>
+        </div>
         <div class="chat-view">
           ${(convos||[]).map(m=>`<div class="chat-msg ${m.role}"><div>${m.content}</div><div class="time">${fmtDate(m.created_at)}</div></div>`).join('')}
         </div>
