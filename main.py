@@ -26,13 +26,19 @@ logger = logging.getLogger("sheri")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    init_db()
-    seed()  # Populate admin tables if empty
+    try:
+        init_db()
+        seed()  # Populate admin tables if empty
+    except Exception as e:
+        logger.warning(f"Seed/init warning: {e}")
     # Import tools to populate TOOL_REGISTRY
     import tools.human_handoff  # noqa: F401
-    import tools.reminders  # noqa: F401
-    from tools.reminders import start_scheduler
-    start_scheduler()
+    try:
+        import tools.reminders  # noqa: F401
+        from tools.reminders import start_scheduler
+        start_scheduler()
+    except Exception as e:
+        logger.warning(f"Reminders disabled: {e}")
     logger.info("Sheri bot started")
     yield
     # Shutdown
