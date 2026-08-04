@@ -1,5 +1,6 @@
 """Supabase storage via REST API — conversations + admin content management."""
 
+import json
 from datetime import datetime, timezone
 
 import httpx
@@ -359,6 +360,23 @@ def get_dashboard_stats() -> dict:
     followups = [l for l in leads if l.get("next_followup")]
     followups.sort(key=lambda l: l["next_followup"])
 
+    # Top courses by revenue
+    course_revenue = {}
+    for p in all_purchases:
+        cn = p.get("course_name", "אחר")
+        course_revenue[cn] = course_revenue.get(cn, 0) + float(p.get("amount", 0))
+    top_courses = sorted(course_revenue.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # Needs attention: leads with no activity in 7+ days and not closed
+    from datetime import timedelta
+    week_ago = (now - timedelta(days=7)).isoformat()
+    closed_statuses = {"נרשמה", "לקוחה"}
+    needs_attention = [
+        l for l in leads
+        if l.get("status", "חדש") not in closed_statuses
+        and l.get("last_contact", "") < week_ago
+    ][:5]
+
     return {
         "total_leads": total,
         "new_this_month": new_this_month,
@@ -367,4 +385,24 @@ def get_dashboard_stats() -> dict:
         "conversion_rate": conversion,
         "funnel": funnel,
         "upcoming_followups": followups[:5],
+        "top_courses": [{"name": n, "revenue": r} for n, r in top_courses],
+        "needs_attention": needs_attention,
     }
+
+
+# ── CRM Settings ──────────────────────────────────────────────────
+
+def get_crm_settings() -> dict:
+    """Get all CRM settings as a dict of {key: value}."""
+    r = httpx.get(_url("crm_settings"), headers=_get_headers(), params={"select": "*"})
+    r.raise_for_status()
+    return {row["setting_key"]: row["setting_value"] for row in r.json()}
+
+
+def update_crm_setting(setting_key: str, setting_value) -> None:
+    """Update a single CRM setting."""
+    httpx.patch(
+        _url("crm_settings"), headers=_get_headers(),
+        params={"setting_key": f"eq.{setting_key}"},
+        json={"setting_value": json.dumps(setting_value) if isinstance(setting_value, (list, dict)) else setting_value, "updated_at": _now()},
+    ).raise_for_status()

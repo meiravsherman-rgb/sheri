@@ -1,15 +1,17 @@
-"""CRM panel — lead tracking, timeline, purchases for Merav."""
+"""CRM panel — lead tracking, timeline, purchases, settings for Merav."""
 
+import csv
+import io
 import json
 import os
 from fastapi import APIRouter, Request, Response, Depends, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from database import (
     get_leads, get_lead, update_lead, create_lead_manual,
     log_lead_event, get_lead_timeline, get_lead_conversations,
     create_purchase, get_purchases, get_dashboard_stats,
-    get_all_courses,
+    get_all_courses, get_crm_settings, update_crm_setting,
 )
 
 router = APIRouter(prefix="/crm")
@@ -46,6 +48,14 @@ class NewPurchase(BaseModel):
     payment_method: str = "cardcom"
     notes: str = ""
 
+class BulkStatus(BaseModel):
+    phones: list[str]
+    status: str
+
+class SettingUpdate(BaseModel):
+    setting_key: str
+    setting_value: list
+
 
 # ── API Routes ─────────────────────────────────────────────────────
 
@@ -73,7 +83,6 @@ async def api_update_lead(phone: str, req: LeadUpdate):
     old = get_lead(phone)
     if not old:
         raise HTTPException(status_code=404, detail="Lead not found")
-    # Log status change
     if "status" in fields and fields["status"] != old.get("status"):
         log_lead_event(phone, "status_change", {
             "from": old.get("status"), "to": fields["status"]
@@ -89,6 +98,36 @@ async def api_create_lead(req: NewLead):
     create_lead_manual(req.phone, req.name, req.source)
     log_lead_event(req.phone, "status_change", {"from": None, "to": "חדש"})
     return {"ok": True}
+
+
+@router.post("/api/leads/bulk-status", dependencies=[Depends(check_auth)])
+async def api_bulk_status(req: BulkStatus):
+    for phone in req.phones:
+        old = get_lead(phone)
+        if old and old.get("status") != req.status:
+            log_lead_event(phone, "status_change", {"from": old.get("status"), "to": req.status})
+            update_lead(phone, status=req.status)
+    return {"ok": True, "count": len(req.phones)}
+
+
+@router.get("/api/leads-export", dependencies=[Depends(check_auth)])
+async def api_export_csv():
+    leads = get_leads()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["phone", "name", "status", "source", "tags", "notes", "first_contact", "last_contact", "total_paid"])
+    for l in leads:
+        writer.writerow([
+            l.get("phone", ""), l.get("name", ""), l.get("status", ""),
+            l.get("source", ""), ",".join(l.get("tags") or []), l.get("notes", ""),
+            l.get("first_contact", ""), l.get("last_contact", ""), l.get("total_paid", 0),
+        ])
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=leads.csv"},
+    )
 
 
 @router.get("/api/leads/{phone}/timeline", dependencies=[Depends(check_auth)])
@@ -122,6 +161,17 @@ async def api_courses_list():
             for c in get_all_courses() if c.get("is_active")]
 
 
+@router.get("/api/settings", dependencies=[Depends(check_auth)])
+async def api_get_settings():
+    return get_crm_settings()
+
+
+@router.post("/api/settings", dependencies=[Depends(check_auth)])
+async def api_update_settings(req: SettingUpdate):
+    update_crm_setting(req.setting_key, req.setting_value)
+    return {"ok": True}
+
+
 # ── HTML Page ──────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
@@ -137,90 +187,201 @@ CRM_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM — שיטת שרמן</title>
 <style>
-:root{--pink:#e91e8c;--pink-light:#fce4f3;--green:#27ae60;--blue:#3498db;--orange:#f39c12;--gray:#95a5a6;--dark:#2c3e50;--bg:#f8f9fa}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--dark);direction:rtl}
-.login-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:999}
-.login-box{background:#fff;padding:2rem;border-radius:12px;text-align:center;width:300px}
-.login-box h2{color:var(--pink);margin-bottom:1rem}
-.login-box input{width:100%;padding:.7rem;border:1px solid #ddd;border-radius:8px;margin-bottom:1rem;text-align:center;font-size:1rem}
-.login-box button{background:var(--pink);color:#fff;border:none;padding:.7rem 2rem;border-radius:8px;cursor:pointer;font-size:1rem;width:100%}
-header{background:linear-gradient(135deg,var(--pink),#c2185b);color:#fff;padding:1rem;display:flex;justify-content:space-between;align-items:center}
-header h1{font-size:1.3rem}
-.nav{display:flex;gap:.5rem;background:#fff;padding:.5rem;border-bottom:1px solid #eee}
-.nav button{padding:.5rem 1rem;border:none;background:none;cursor:pointer;border-radius:8px;font-size:.9rem;color:#666}
-.nav button.active{background:var(--pink-light);color:var(--pink);font-weight:bold}
-.content{padding:1rem;max-width:1200px;margin:0 auto}
-.hidden{display:none}
-/* Dashboard */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem}
-.stat-card{background:#fff;border-radius:12px;padding:1.2rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.stat-card .number{font-size:2rem;font-weight:bold;color:var(--pink)}
-.stat-card .label{color:#888;font-size:.85rem;margin-top:.3rem}
-.funnel{background:#fff;border-radius:12px;padding:1.2rem;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:1.5rem}
-.funnel h3{margin-bottom:1rem;color:var(--dark)}
-.funnel-bar{display:flex;align-items:center;margin-bottom:.6rem;gap:.5rem}
-.funnel-bar .label{min-width:100px;font-size:.85rem}
-.funnel-bar .bar{height:28px;border-radius:6px;display:flex;align-items:center;padding:0 .5rem;color:#fff;font-size:.8rem;min-width:30px;transition:width .5s}
-.followups-section{background:#fff;border-radius:12px;padding:1.2rem;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.followups-section h3{margin-bottom:1rem}
-.followup-item{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #f0f0f0;cursor:pointer}
-.followup-item:hover{background:#fafafa}
+:root {
+  --pink: #e91e8c; --pink-dark: #c2185b; --pink-light: #fce4f3; --pink-bg: #fff5fb;
+  --green: #27ae60; --blue: #3498db; --orange: #f39c12; --red: #e74c3c;
+  --gray: #95a5a6; --dark: #2c3e50; --bg: #f4f0f7;
+  --purple: #9b59b6; --teal: #1abc9c;
+  --shadow: 0 4px 15px rgba(0,0,0,.08);
+  --shadow-hover: 0 8px 25px rgba(0,0,0,.12);
+  --radius: 16px;
+  --transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--dark); direction: rtl; }
+
+/* Login */
+.login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, rgba(233,30,140,.9), rgba(194,24,91,.9)); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.login-box { background: #fff; padding: 2.5rem; border-radius: var(--radius); text-align: center; width: 340px; box-shadow: var(--shadow-hover); }
+.login-box h2 { color: var(--pink); margin-bottom: .5rem; font-size: 1.5rem; }
+.login-box p { color: #999; font-size: .85rem; margin-bottom: 1.5rem; }
+.login-box input { width: 100%; padding: .8rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 1rem; text-align: center; font-size: 1rem; outline: none; transition: var(--transition); }
+.login-box input:focus { border-color: var(--pink); }
+.login-box button { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; border: none; padding: .8rem 2rem; border-radius: 12px; cursor: pointer; font-size: 1rem; width: 100%; transition: var(--transition); }
+.login-box button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(233,30,140,.4); }
+
+/* Header */
+header { background: linear-gradient(135deg, var(--pink), var(--pink-dark), #8e24aa); color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 20px rgba(233,30,140,.3); }
+header h1 { font-size: 1.4rem; font-weight: 700; }
+header a { color: rgba(255,255,255,.85); text-decoration: none; font-size: .85rem; transition: var(--transition); }
+header a:hover { color: #fff; }
+
+/* Nav */
+.nav { display: flex; gap: .3rem; background: #fff; padding: .6rem; border-bottom: 1px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.nav button { padding: .6rem 1.2rem; border: none; background: none; cursor: pointer; border-radius: 12px; font-size: .9rem; color: #888; font-weight: 500; transition: var(--transition); position: relative; }
+.nav button:hover { color: var(--pink); background: var(--pink-bg); }
+.nav button.active { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; font-weight: 700; box-shadow: 0 2px 10px rgba(233,30,140,.3); }
+
+.content { padding: 1.2rem; max-width: 1300px; margin: 0 auto; }
+.hidden { display: none !important; }
+
+/* Stat Cards */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-card { background: #fff; border-radius: var(--radius); padding: 1.3rem; text-align: center; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: var(--transition); }
+.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+.stat-card:nth-child(1)::before { background: linear-gradient(90deg, var(--pink), var(--purple)); }
+.stat-card:nth-child(2)::before { background: linear-gradient(90deg, var(--blue), var(--teal)); }
+.stat-card:nth-child(3)::before { background: linear-gradient(90deg, var(--green), var(--teal)); }
+.stat-card:nth-child(4)::before { background: linear-gradient(90deg, var(--orange), var(--red)); }
+.stat-card:nth-child(5)::before { background: linear-gradient(90deg, var(--purple), var(--pink)); }
+.stat-card .icon { font-size: 1.8rem; margin-bottom: .3rem; }
+.stat-card .number { font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, var(--pink), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-card .label { color: #999; font-size: .82rem; margin-top: .3rem; }
+
+/* Dashboard Grid */
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.dash-card { background: #fff; border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow); }
+.dash-card h3 { color: var(--dark); margin-bottom: 1rem; font-size: 1rem; display: flex; align-items: center; gap: .4rem; }
+
+/* Funnel */
+.funnel-step { display: flex; align-items: center; margin-bottom: .5rem; gap: .5rem; }
+.funnel-step .f-label { min-width: 90px; font-size: .85rem; font-weight: 500; }
+.funnel-step .f-bar-bg { flex: 1; height: 32px; background: #f0f0f0; border-radius: 8px; overflow: hidden; position: relative; }
+.funnel-step .f-bar { height: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .82rem; font-weight: 600; transition: width .8s cubic-bezier(.4,0,.2,1); min-width: 28px; }
+.funnel-step .f-count { min-width: 30px; text-align: center; font-weight: 700; font-size: .9rem; }
+
+/* Top Courses */
+.course-row { display: flex; justify-content: space-between; align-items: center; padding: .5rem 0; border-bottom: 1px solid #f5f5f5; }
+.course-row:last-child { border: none; }
+.course-row .c-name { font-size: .85rem; flex: 1; }
+.course-row .c-amount { font-weight: 700; color: var(--green); font-size: .9rem; }
+
+/* Followups & Attention */
+.list-item { display: flex; justify-content: space-between; align-items: center; padding: .6rem .4rem; border-bottom: 1px solid #f5f5f5; cursor: pointer; border-radius: 8px; transition: var(--transition); }
+.list-item:hover { background: var(--pink-bg); }
+.list-item .name { font-weight: 500; font-size: .88rem; }
+.list-item .meta { font-size: .78rem; color: #999; }
+.attention-badge { background: #fff3cd; color: #856404; padding: .15rem .5rem; border-radius: 6px; font-size: .72rem; font-weight: 600; }
+
 /* Leads */
-.filters{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
-.filters input,.filters select{padding:.5rem;border:1px solid #ddd;border-radius:8px;font-size:.9rem}
-.filters input{flex:1;min-width:150px}
-.btn{padding:.5rem 1rem;border:none;border-radius:8px;cursor:pointer;font-size:.85rem}
-.btn-pink{background:var(--pink);color:#fff}
-.btn-green{background:var(--green);color:#fff}
-.btn-blue{background:var(--blue);color:#fff}
-.btn-small{padding:.3rem .6rem;font-size:.8rem}
-.leads-table{width:100%;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.leads-table table{width:100%;border-collapse:collapse}
-.leads-table th{background:#f8f8f8;padding:.7rem;text-align:right;font-size:.85rem;color:#666}
-.leads-table td{padding:.7rem;border-top:1px solid #f0f0f0;font-size:.9rem}
-.leads-table tr:hover{background:#fefefe;cursor:pointer}
-.status-badge{padding:.2rem .6rem;border-radius:12px;font-size:.75rem;font-weight:bold}
-.status-חדש{background:#e8e8e8;color:#666}
-.status-מתעניינת{background:#d4efff;color:#2980b9}
-.status-בשיחה{background:#ffecd2;color:#e67e22}
-.status-נרשמה{background:#d5f5e3;color:#27ae60}
-.status-לקוחה{background:var(--pink-light);color:var(--pink)}
-.tag{background:#e8e8e8;padding:.15rem .4rem;border-radius:4px;font-size:.7rem;margin-left:.2rem}
-/* Lead Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:#fff;border-radius:12px;width:95%;max-width:700px;max-height:90vh;overflow-y:auto;padding:1.5rem}
-.modal h2{color:var(--pink);margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
-.modal .close-btn{background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999}
-.field-group{margin-bottom:1rem}
-.field-group label{display:block;font-size:.85rem;color:#666;margin-bottom:.3rem}
-.field-group input,.field-group select,.field-group textarea{width:100%;padding:.5rem;border:1px solid #ddd;border-radius:8px;font-size:.9rem}
-.field-group textarea{min-height:80px;resize:vertical}
-.tags-container{display:flex;flex-wrap:wrap;gap:.3rem}
-.tag-toggle{padding:.3rem .6rem;border:1px solid #ddd;border-radius:12px;cursor:pointer;font-size:.8rem;background:#fff}
-.tag-toggle.active{background:var(--pink-light);border-color:var(--pink);color:var(--pink)}
-.timeline{margin-top:1rem}
-.timeline-item{padding:.6rem;border-right:3px solid var(--pink-light);margin-right:.5rem;margin-bottom:.5rem;font-size:.85rem}
-.timeline-item .time{color:#999;font-size:.75rem}
-.timeline-item.handoff{border-color:var(--orange)}
-.timeline-item.purchase{border-color:var(--green)}
-.timeline-item.status_change{border-color:var(--blue)}
-.chat-view{background:#f0f0f0;border-radius:8px;padding:.8rem;max-height:400px;overflow-y:auto}
-.chat-msg{margin-bottom:.5rem;padding:.5rem .8rem;border-radius:8px;max-width:80%;font-size:.85rem}
-.chat-msg.user{background:#dcf8c6;margin-left:auto}
-.chat-msg.assistant{background:#fff}
-.chat-msg .time{font-size:.7rem;color:#999;margin-top:.2rem}
-/* Purchases tab */
-.purchases-table{width:100%;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-.purchases-table table{width:100%;border-collapse:collapse}
-.purchases-table th{background:#f8f8f8;padding:.7rem;text-align:right;font-size:.85rem;color:#666}
-.purchases-table td{padding:.7rem;border-top:1px solid #f0f0f0;font-size:.9rem}
-.toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:.7rem 1.5rem;border-radius:8px;z-index:200;display:none}
-@media(max-width:600px){
-  .leads-table{font-size:.8rem}
-  .leads-table th:nth-child(n+4),.leads-table td:nth-child(n+4){display:none}
-  .stats-grid{grid-template-columns:1fr 1fr}
-  .modal{width:100%;border-radius:0;max-height:100vh}
+.filters { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select { padding: .55rem .8rem; border: 2px solid #eee; border-radius: 12px; font-size: .9rem; outline: none; transition: var(--transition); }
+.filters input:focus, .filters select:focus { border-color: var(--pink); }
+.filters input { flex: 1; min-width: 150px; }
+
+.btn { padding: .55rem 1.1rem; border: none; border-radius: 12px; cursor: pointer; font-size: .85rem; font-weight: 600; transition: var(--transition); display: inline-flex; align-items: center; gap: .3rem; }
+.btn:hover { transform: translateY(-1px); }
+.btn-pink { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; box-shadow: 0 2px 8px rgba(233,30,140,.3); }
+.btn-green { background: linear-gradient(135deg, var(--green), var(--teal)); color: #fff; }
+.btn-blue { background: linear-gradient(135deg, var(--blue), #2471a3); color: #fff; }
+.btn-outline { background: #fff; border: 2px solid #eee; color: #666; }
+.btn-outline:hover { border-color: var(--pink); color: var(--pink); }
+.btn-small { padding: .35rem .7rem; font-size: .78rem; }
+.btn-icon { width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+
+/* Leads Table */
+.leads-table { width: 100%; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.leads-table table { width: 100%; border-collapse: collapse; }
+.leads-table th { background: linear-gradient(180deg, #fafafa, #f5f5f5); padding: .8rem; text-align: right; font-size: .82rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.leads-table td { padding: .75rem .8rem; border-top: 1px solid #f5f5f5; font-size: .88rem; }
+.leads-table tr { transition: var(--transition); cursor: pointer; }
+.leads-table tr:hover { background: var(--pink-bg); }
+
+.lead-row-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
+.lead-name-cell { display: flex; align-items: center; gap: .5rem; }
+
+.status-badge { padding: .25rem .7rem; border-radius: 20px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.tag { padding: .15rem .45rem; border-radius: 6px; font-size: .7rem; margin-left: .2rem; font-weight: 500; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.activity-dot.hot { background: var(--green); box-shadow: 0 0 6px rgba(39,174,96,.5); animation: pulse 2s infinite; }
+.activity-dot.warm { background: var(--orange); }
+.activity-dot.cold { background: var(--gray); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+
+.bulk-bar { display: none; align-items: center; gap: .5rem; padding: .6rem 1rem; background: var(--pink-light); border-radius: 12px; margin-bottom: .8rem; }
+.bulk-bar.visible { display: flex; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(3px); animation: fadeIn .2s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal { background: #fff; border-radius: var(--radius); width: 95%; max-width: 720px; max-height: 90vh; overflow-y: auto; animation: slideUp .3s; }
+@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 1; border-radius: var(--radius) var(--radius) 0 0; }
+.modal-header h2 { color: var(--pink); font-size: 1.2rem; display: flex; align-items: center; gap: .5rem; }
+.modal-header .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #ccc; transition: var(--transition); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.modal-header .close-btn:hover { background: #f5f5f5; color: #666; }
+.modal-body { padding: 1.5rem; }
+.modal-tabs { display: flex; gap: .2rem; padding: 0 1.5rem; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
+.modal-tabs button { padding: .6rem 1rem; border: none; background: none; cursor: pointer; font-size: .85rem; color: #888; border-bottom: 2px solid transparent; transition: var(--transition); }
+.modal-tabs button.active { color: var(--pink); border-bottom-color: var(--pink); font-weight: 600; }
+
+.field-group { margin-bottom: .8rem; }
+.field-group label { display: block; font-size: .82rem; color: #888; margin-bottom: .3rem; font-weight: 500; }
+.field-group input, .field-group select, .field-group textarea { width: 100%; padding: .55rem .8rem; border: 2px solid #eee; border-radius: 10px; font-size: .9rem; outline: none; transition: var(--transition); }
+.field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--pink); }
+.field-group textarea { min-height: 80px; resize: vertical; }
+
+.tags-container { display: flex; flex-wrap: wrap; gap: .3rem; }
+.tag-toggle { padding: .35rem .7rem; border: 2px solid #eee; border-radius: 20px; cursor: pointer; font-size: .8rem; background: #fff; transition: var(--transition); font-weight: 500; }
+.tag-toggle:hover { border-color: #ccc; }
+.tag-toggle.active { border-color: var(--pink); background: var(--pink-light); color: var(--pink); }
+
+/* Timeline */
+.timeline { margin-top: .5rem; }
+.timeline-item { display: flex; gap: .6rem; padding: .6rem 0; border-bottom: 1px solid #f8f8f8; font-size: .85rem; }
+.timeline-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+.timeline-dot.handoff { background: #fff3e0; }
+.timeline-dot.purchase { background: #e8f5e9; }
+.timeline-dot.status_change { background: #e3f2fd; }
+.timeline-dot.note { background: #f3e5f5; }
+.timeline-dot.message { background: #f5f5f5; }
+.timeline-content { flex: 1; }
+.timeline-content .time { color: #bbb; font-size: .72rem; }
+
+/* Chat */
+.chat-view { background: linear-gradient(180deg, #ece5dd, #d9d2c5); border-radius: 12px; padding: .8rem; max-height: 400px; overflow-y: auto; }
+.chat-msg { margin-bottom: .4rem; padding: .5rem .8rem; border-radius: 8px; max-width: 78%; font-size: .85rem; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+.chat-msg.user { background: #dcf8c6; margin-left: auto; border-bottom-left-radius: 2px; }
+.chat-msg.assistant { background: #fff; border-bottom-right-radius: 2px; }
+.chat-msg .time { font-size: .68rem; color: #999; margin-top: .2rem; text-align: left; }
+
+/* Settings */
+.settings-section { background: #fff; border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
+.settings-section h3 { color: var(--dark); margin-bottom: 1rem; font-size: 1rem; display: flex; align-items: center; gap: .4rem; }
+.setting-item { display: flex; align-items: center; gap: .5rem; padding: .4rem 0; border-bottom: 1px solid #f8f8f8; }
+.setting-item:last-child { border: none; }
+.setting-item input { flex: 1; padding: .4rem .6rem; border: 1px solid #eee; border-radius: 8px; font-size: .85rem; }
+.setting-item .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 0 1px #ddd; }
+.setting-item .remove-btn { color: #ccc; cursor: pointer; font-size: 1.2rem; transition: var(--transition); }
+.setting-item .remove-btn:hover { color: var(--red); }
+
+/* Purchases table */
+.purchases-table { width: 100%; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.purchases-table table { width: 100%; border-collapse: collapse; }
+.purchases-table th { background: linear-gradient(180deg, #fafafa, #f5f5f5); padding: .8rem; text-align: right; font-size: .82rem; color: #888; font-weight: 600; }
+.purchases-table td { padding: .75rem .8rem; border-top: 1px solid #f5f5f5; font-size: .88rem; }
+
+/* Toast */
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(100px); background: linear-gradient(135deg, #333, #555); color: #fff; padding: .8rem 1.8rem; border-radius: 12px; z-index: 200; font-size: .9rem; box-shadow: 0 4px 15px rgba(0,0,0,.2); transition: transform .3s cubic-bezier(.4,0,.2,1); }
+.toast.visible { transform: translateX(-50%) translateY(0); }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 3rem 1rem; color: #ccc; }
+.empty-state .icon { font-size: 3rem; margin-bottom: .5rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .leads-table th:nth-child(n+5), .leads-table td:nth-child(n+5) { display: none; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .modal { width: 100%; border-radius: 0; max-height: 100vh; }
+  .filters { flex-direction: column; }
+  .nav { overflow-x: auto; }
+  header h1 { font-size: 1.1rem; }
 }
 </style>
 </head>
@@ -229,43 +390,52 @@ header h1{font-size:1.3rem}
 <div id="loginOverlay" class="login-overlay">
 <div class="login-box">
   <h2>CRM שיטת שרמן</h2>
-  <input type="password" id="loginPass" placeholder="סיסמה">
+  <p>ניהול לידים ומעקב לקוחות</p>
+  <input type="password" id="loginPass" placeholder="סיסמה" onkeydown="if(event.key==='Enter')doLogin()">
   <button onclick="doLogin()">כניסה</button>
 </div>
 </div>
 
 <header>
   <h1>CRM — שיטת שרמן</h1>
-  <a href="/admin" style="color:#fff;text-decoration:none;font-size:.85rem">ניהול תוכן &larr;</a>
+  <a href="/admin">ניהול תוכן &larr;</a>
 </header>
 
 <div class="nav">
   <button class="active" onclick="showTab('dashboard')">דשבורד</button>
   <button onclick="showTab('leads')">לידים</button>
   <button onclick="showTab('purchases')">רכישות</button>
+  <button onclick="showTab('settings')">הגדרות</button>
 </div>
 
 <div class="content">
   <!-- Dashboard -->
   <div id="tab-dashboard">
     <div class="stats-grid" id="statsGrid"></div>
-    <div class="funnel" id="funnelSection"><h3>משפך שיווקי</h3><div id="funnelBars"></div></div>
-    <div class="followups-section"><h3>פולואפים קרובים</h3><div id="followupsList"></div></div>
+    <div class="dash-grid">
+      <div class="dash-card"><h3>משפך שיווקי</h3><div id="funnelBars"></div></div>
+      <div class="dash-card"><h3>קורסים מובילים</h3><div id="topCourses"></div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card"><h3>פולואפים קרובים</h3><div id="followupsList"></div></div>
+      <div class="dash-card"><h3>דורשות תשומת לב</h3><div id="attentionList"></div></div>
+    </div>
   </div>
 
   <!-- Leads -->
   <div id="tab-leads" class="hidden">
     <div class="filters">
       <input type="text" id="searchInput" placeholder="חיפוש שם או טלפון..." oninput="loadLeads()">
-      <select id="statusFilter" onchange="loadLeads()">
-        <option value="">כל הסטטוסים</option>
-        <option value="חדש">חדש</option>
-        <option value="מתעניינת">מתעניינת</option>
-        <option value="בשיחה אישית">בשיחה אישית</option>
-        <option value="נרשמה">נרשמה</option>
-        <option value="לקוחה">לקוחה</option>
-      </select>
+      <select id="statusFilter" onchange="loadLeads()"><option value="">כל הסטטוסים</option></select>
+      <select id="tagFilter" onchange="loadLeads()"><option value="">כל התגיות</option></select>
       <button class="btn btn-pink" onclick="showNewLeadModal()">+ ליד חדש</button>
+      <button class="btn btn-outline btn-small" onclick="exportCSV()">CSV יצוא</button>
+    </div>
+    <div class="bulk-bar" id="bulkBar">
+      <span id="bulkCount">0</span> נבחרו
+      <select id="bulkStatus"></select>
+      <button class="btn btn-blue btn-small" onclick="applyBulkStatus()">עדכן סטטוס</button>
+      <button class="btn btn-outline btn-small" onclick="clearBulk()">ביטול</button>
     </div>
     <div class="leads-table" id="leadsTable"></div>
   </div>
@@ -275,6 +445,26 @@ header h1{font-size:1.3rem}
     <div style="margin-bottom:1rem"><button class="btn btn-green" onclick="showNewPurchaseModal()">+ רכישה חדשה</button></div>
     <div class="purchases-table" id="purchasesTable"></div>
   </div>
+
+  <!-- Settings -->
+  <div id="tab-settings" class="hidden">
+    <div class="settings-section">
+      <h3>סטטוסים</h3>
+      <div id="settingsStatuses"></div>
+      <button class="btn btn-outline btn-small" style="margin-top:.5rem" onclick="addSettingItem('statuses')">+ הוסף סטטוס</button>
+    </div>
+    <div class="settings-section">
+      <h3>תגיות</h3>
+      <div id="settingsTags"></div>
+      <button class="btn btn-outline btn-small" style="margin-top:.5rem" onclick="addSettingItem('tags')">+ הוסף תגית</button>
+    </div>
+    <div class="settings-section">
+      <h3>מקורות לידים</h3>
+      <div id="settingsSources"></div>
+      <button class="btn btn-outline btn-small" style="margin-top:.5rem" onclick="addSettingItem('sources')">+ הוסף מקור</button>
+    </div>
+    <button class="btn btn-pink" style="margin-top:1rem" onclick="saveSettings()">שמור הגדרות</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -283,6 +473,8 @@ header h1{font-size:1.3rem}
 const API = '/crm/api';
 let currentTab = 'dashboard';
 let allCourses = [];
+let settings = { statuses: [], tags: [], sources: [] };
+let selectedLeads = new Set();
 
 // Auth
 async function doLogin() {
@@ -296,77 +488,180 @@ async function doLogin() {
 })();
 
 async function init() {
-  allCourses = await apiFetch('/courses-list');
+  const [courses, s] = await Promise.all([apiFetch('/courses-list'), apiFetch('/settings')]);
+  allCourses = courses || [];
+  if (s) {
+    settings.statuses = s.statuses || [];
+    settings.tags = s.tags || [];
+    settings.sources = s.sources || [];
+  }
+  populateFilters();
   loadDashboard();
 }
 
 async function apiFetch(path, opts={}) {
   const r = await fetch(API+path, opts);
   if (r.status===401) { document.getElementById('loginOverlay').style.display='flex'; return null; }
+  if (!r.ok) return null;
   return r.json();
 }
 
 function showTab(tab) {
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('[id^="tab-"]').forEach(d=>d.classList.add('hidden'));
-  document.querySelector(`.nav button[onclick="showTab('${tab}')"]`).classList.add('active');
+  event.target.classList.add('active');
   document.getElementById('tab-'+tab).classList.remove('hidden');
   currentTab = tab;
   if (tab==='dashboard') loadDashboard();
   if (tab==='leads') loadLeads();
   if (tab==='purchases') loadPurchases();
+  if (tab==='settings') renderSettings();
 }
 
 function toast(msg) {
-  const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';
-  setTimeout(()=>t.style.display='none',2500);
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('visible');
+  setTimeout(()=>t.classList.remove('visible'),2500);
 }
 
 function fmtDate(iso) { if(!iso)return'—'; const d=new Date(iso); return d.toLocaleDateString('he-IL')+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); }
 function fmtShortDate(iso) { if(!iso)return'—'; return new Date(iso).toLocaleDateString('he-IL'); }
+
+function getStatusColor(key) {
+  const s = settings.statuses.find(s=>s.key===key);
+  return s ? s.color : '#95a5a6';
+}
+function getStatusLabel(key) {
+  const s = settings.statuses.find(s=>s.key===key);
+  return s ? (s.label || s.key) : key;
+}
+function getTagColor(key) {
+  const t = settings.tags.find(t=>t.key===key);
+  return t ? t.color : '#95a5a6';
+}
+function getSourceLabel(key) {
+  const s = settings.sources.find(s=>s.key===key);
+  return s ? s.label : key;
+}
+function getAvatarColor(name) {
+  const colors = ['#e91e8c','#9b59b6','#3498db','#1abc9c','#27ae60','#f39c12','#e74c3c','#2c3e50'];
+  let h = 0; for(let i=0;i<(name||'').length;i++) h = name.charCodeAt(i) + ((h<<5)-h);
+  return colors[Math.abs(h) % colors.length];
+}
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\\s+/);
+  return parts.length > 1 ? (parts[0][0]+parts[1][0]) : name.slice(0,2);
+}
+
+function populateFilters() {
+  const sf = document.getElementById('statusFilter');
+  sf.innerHTML = '<option value="">כל הסטטוסים</option>' + settings.statuses.map(s=>`<option value="${s.key}">${s.label||s.key}</option>`).join('');
+  const tf = document.getElementById('tagFilter');
+  tf.innerHTML = '<option value="">כל התגיות</option>' + settings.tags.map(t=>`<option value="${t.key}">${t.key}</option>`).join('');
+  const bs = document.getElementById('bulkStatus');
+  bs.innerHTML = settings.statuses.map(s=>`<option value="${s.key}">${s.label||s.key}</option>`).join('');
+}
 
 // Dashboard
 async function loadDashboard() {
   const d = await apiFetch('/dashboard');
   if(!d) return;
   document.getElementById('statsGrid').innerHTML = `
-    <div class="stat-card"><div class="number">${d.total_leads}</div><div class="label">סה"כ לידים</div></div>
-    <div class="stat-card"><div class="number">${d.new_this_month}</div><div class="label">חדשים החודש</div></div>
-    <div class="stat-card"><div class="number">${d.month_revenue.toLocaleString()}₪</div><div class="label">הכנסות החודש</div></div>
-    <div class="stat-card"><div class="number">${d.conversion_rate}%</div><div class="label">שיעור המרה</div></div>
+    <div class="stat-card"><div class="icon">👥</div><div class="number">${d.total_leads}</div><div class="label">סה"כ לידים</div></div>
+    <div class="stat-card"><div class="icon">✨</div><div class="number">${d.new_this_month}</div><div class="label">חדשים החודש</div></div>
+    <div class="stat-card"><div class="icon">💰</div><div class="number">${d.month_revenue.toLocaleString()}₪</div><div class="label">הכנסות החודש</div></div>
+    <div class="stat-card"><div class="icon">📊</div><div class="number">${d.conversion_rate}%</div><div class="label">שיעור המרה</div></div>
+    <div class="stat-card"><div class="icon">🏦</div><div class="number">${d.total_revenue.toLocaleString()}₪</div><div class="label">הכנסות סה"כ</div></div>
   `;
-  const statuses = ['חדש','מתעניינת','בשיחה אישית','נרשמה','לקוחה'];
-  const colors = ['#95a5a6','#3498db','#f39c12','#27ae60','#e91e8c'];
-  const maxCount = Math.max(...statuses.map(s=>d.funnel[s]||0), 1);
-  document.getElementById('funnelBars').innerHTML = statuses.map((s,i)=>{
-    const count = d.funnel[s]||0;
-    const pct = Math.max(count/maxCount*100, 8);
-    return `<div class="funnel-bar"><span class="label">${s}</span><div class="bar" style="width:${pct}%;background:${colors[i]}">${count}</div></div>`;
+
+  // Funnel from settings
+  const orderedStatuses = settings.statuses.sort((a,b)=>(a.order||0)-(b.order||0));
+  const maxCount = Math.max(...orderedStatuses.map(s=>d.funnel[s.key]||0), 1);
+  document.getElementById('funnelBars').innerHTML = orderedStatuses.map(s=>{
+    const count = d.funnel[s.key]||0;
+    const pct = Math.max(count/maxCount*100, 5);
+    return `<div class="funnel-step">
+      <span class="f-label">${s.label||s.key}</span>
+      <div class="f-bar-bg"><div class="f-bar" style="width:${pct}%;background:${s.color}">${count}</div></div>
+    </div>`;
   }).join('');
+
+  // Top courses
+  const tc = d.top_courses || [];
+  document.getElementById('topCourses').innerHTML = tc.length ? tc.map(c=>
+    `<div class="course-row"><span class="c-name">${c.name}</span><span class="c-amount">${c.revenue.toLocaleString()}₪</span></div>`
+  ).join('') : '<div class="empty-state"><div class="icon">📚</div><p>אין רכישות עדיין</p></div>';
+
+  // Followups
   document.getElementById('followupsList').innerHTML = (d.upcoming_followups||[]).map(l=>
-    `<div class="followup-item" onclick="openLead('${l.phone}')"><span>${l.name||l.phone}</span><span>${fmtShortDate(l.next_followup)}</span></div>`
-  ).join('') || '<p style="color:#999;text-align:center">אין פולואפים מתוכננים</p>';
+    `<div class="list-item" onclick="openLead('${l.phone}')"><span class="name">${l.name||l.phone}</span><span class="meta">${fmtShortDate(l.next_followup)}</span></div>`
+  ).join('') || '<div class="empty-state"><div class="icon">📅</div><p>אין פולואפים מתוכננים</p></div>';
+
+  // Needs attention
+  document.getElementById('attentionList').innerHTML = (d.needs_attention||[]).map(l=>
+    `<div class="list-item" onclick="openLead('${l.phone}')"><span class="name">${l.name||l.phone}</span><span class="attention-badge">לא פעילה 7+ ימים</span></div>`
+  ).join('') || '<div class="empty-state"><div class="icon">✅</div><p>הכל מעודכן</p></div>';
+}
+
+// Activity indicator based on last_contact
+function activityDot(lastContact) {
+  if (!lastContact) return '<span class="activity-dot cold"></span>';
+  const days = (Date.now() - new Date(lastContact).getTime()) / 86400000;
+  if (days < 3) return '<span class="activity-dot hot" title="פעילה"></span>';
+  if (days < 7) return '<span class="activity-dot warm" title="חמה"></span>';
+  return '<span class="activity-dot cold" title="קרה"></span>';
 }
 
 // Leads
 async function loadLeads() {
   const search = document.getElementById('searchInput')?.value||'';
   const status = document.getElementById('statusFilter')?.value||'';
-  const leads = await apiFetch(`/leads?search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}`);
+  const tag = document.getElementById('tagFilter')?.value||'';
+  const leads = await apiFetch(`/leads?search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&tag=${encodeURIComponent(tag)}`);
   if(!leads) return;
-  const statusClass = s => 'status-'+(s==='בשיחה אישית'?'בשיחה':s);
-  document.getElementById('leadsTable').innerHTML = `<table>
-    <tr><th>שם</th><th>טלפון</th><th>סטטוס</th><th>תגיות</th><th>אחרון</th><th>פולואפ</th></tr>
+  selectedLeads.clear();
+  updateBulkBar();
+
+  document.getElementById('leadsTable').innerHTML = leads.length ? `<table>
+    <tr>
+      <th style="width:30px"><input type="checkbox" onchange="toggleAllLeads(this,${JSON.stringify(leads.map(l=>l.phone)).replace(/"/g,'&quot;')})"></th>
+      <th>שם</th><th>טלפון</th><th>סטטוס</th><th>תגיות</th><th>פעילות</th><th>אחרון</th><th>פולואפ</th>
+    </tr>
     ${leads.map(l=>`<tr onclick="openLead('${l.phone}')">
-      <td>${l.name||'—'}</td>
+      <td onclick="event.stopPropagation()"><input type="checkbox" value="${l.phone}" onchange="toggleLeadSelect(this)"></td>
+      <td><div class="lead-name-cell"><div class="lead-row-avatar" style="background:${getAvatarColor(l.name)}">${getInitials(l.name)}</div>${l.name||'—'}</div></td>
       <td dir="ltr">${l.phone}</td>
-      <td><span class="status-badge ${statusClass(l.status)}">${l.status}</span></td>
-      <td>${(l.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</td>
+      <td><span class="status-badge" style="background:${getStatusColor(l.status)}20;color:${getStatusColor(l.status)}">${getStatusLabel(l.status)}</span></td>
+      <td>${(l.tags||[]).map(t=>`<span class="tag" style="background:${getTagColor(t)}20;color:${getTagColor(t)}">${t}</span>`).join('')}</td>
+      <td>${activityDot(l.last_contact)}</td>
       <td>${fmtShortDate(l.last_contact)}</td>
       <td>${fmtShortDate(l.next_followup)}</td>
     </tr>`).join('')}
-  </table>`;
+  </table>` : '<div class="empty-state"><div class="icon">👥</div><p>אין לידים</p></div>';
 }
+
+function toggleLeadSelect(cb) {
+  if(cb.checked) selectedLeads.add(cb.value); else selectedLeads.delete(cb.value);
+  updateBulkBar();
+}
+function toggleAllLeads(cb, phones) {
+  document.querySelectorAll('#leadsTable input[type=checkbox][value]').forEach(c=>{c.checked=cb.checked;});
+  if(cb.checked) phones.forEach(p=>selectedLeads.add(p)); else selectedLeads.clear();
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  if(selectedLeads.size>0) { bar.classList.add('visible'); document.getElementById('bulkCount').textContent=selectedLeads.size; }
+  else bar.classList.remove('visible');
+}
+function clearBulk() { selectedLeads.clear(); document.querySelectorAll('#leadsTable input[type=checkbox]').forEach(c=>c.checked=false); updateBulkBar(); }
+async function applyBulkStatus() {
+  const status = document.getElementById('bulkStatus').value;
+  await apiFetch('/leads/bulk-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phones:[...selectedLeads],status})});
+  toast(`עודכנו ${selectedLeads.size} לידים`);
+  loadLeads();
+}
+function exportCSV() { window.open(API+'/leads-export','_blank'); }
 
 // Lead detail modal
 async function openLead(phone) {
@@ -378,87 +673,107 @@ async function openLead(phone) {
   ]);
   if(!lead) return;
 
-  const availableTags = ['פוריות','כאבים','PMS','נערות','FAM','התרוקנות','אמהות ובנות','כללי'];
   const leadTags = lead.tags||[];
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.innerHTML = `<div class="modal">
-    <h2>${lead.name||lead.phone} <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
-      <div class="field-group">
-        <label>סטטוס</label>
-        <select id="m-status" onchange="updateField('${phone}','status',this.value)">
-          ${['חדש','מתעניינת','בשיחה אישית','נרשמה','לקוחה'].map(s=>`<option ${s===lead.status?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field-group">
-        <label>מקור</label>
-        <select id="m-source" onchange="updateField('${phone}','source',this.value)">
-          ${['whatsapp_bot','manual','referral','frontal','other'].map(s=>`<option ${s===lead.source?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field-group">
-        <label>שם</label>
-        <input value="${lead.name||''}" onblur="updateField('${phone}','name',this.value)">
-      </div>
-      <div class="field-group">
-        <label>פולואפ הבא</label>
-        <input type="datetime-local" value="${lead.next_followup?lead.next_followup.slice(0,16):''}" onchange="updateField('${phone}','next_followup',this.value?new Date(this.value).toISOString():null)">
-      </div>
+    <div class="modal-header">
+      <h2><div class="lead-row-avatar" style="background:${getAvatarColor(lead.name)}">${getInitials(lead.name)}</div> ${lead.name||lead.phone}</h2>
+      <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button>
     </div>
-
-    <div class="field-group">
-      <label>תגיות</label>
-      <div class="tags-container">
-        ${availableTags.map(t=>`<span class="tag-toggle ${leadTags.includes(t)?'active':''}" onclick="toggleTag(this,'${phone}','${t}')">${t}</span>`).join('')}
-      </div>
+    <div class="modal-tabs">
+      <button class="active" onclick="showModalTab(this,'mtab-details')">פרטים</button>
+      <button onclick="showModalTab(this,'mtab-timeline')">ציר זמן (${timeline?.length||0})</button>
+      <button onclick="showModalTab(this,'mtab-chat')">שיחה (${convos?.length||0})</button>
+      <button onclick="showModalTab(this,'mtab-purchases')">רכישות (${purchases?.length||0})</button>
     </div>
-
-    <div class="field-group">
-      <label>הערות</label>
-      <textarea id="m-notes" onblur="updateField('${phone}','notes',this.value)">${lead.notes||''}</textarea>
-    </div>
-
-    <details style="margin-top:1rem">
-      <summary style="cursor:pointer;font-weight:bold;color:var(--pink)">ציר זמן (${timeline?.length||0})</summary>
-      <div class="timeline">
-        ${(timeline||[]).map(e=>{
-          const cls = e.event_type;
-          let icon='📝', text='';
-          const data = typeof e.event_data === 'string' ? JSON.parse(e.event_data||'{}') : (e.event_data||{});
-          if(cls==='handoff'){icon='🔄';text=`העברה למירב: ${data.reason||''}`}
-          else if(cls==='purchase'){icon='💰';text=`רכישה: ${data.course||''} — ${data.amount||''}₪`}
-          else if(cls==='status_change'){icon='📊';text=`${data.from||'—'} → ${data.to||'—'}`}
-          else if(cls==='note'){icon='📝';text=data.text||''}
-          else{text=JSON.stringify(data)}
-          return `<div class="timeline-item ${cls}"><span class="time">${fmtDate(e.created_at)}</span> ${icon} ${text}</div>`;
-        }).join('')}
+    <div class="modal-body">
+      <!-- Details tab -->
+      <div id="mtab-details">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+          <div class="field-group">
+            <label>סטטוס</label>
+            <select onchange="updateField('${phone}','status',this.value)">
+              ${settings.statuses.map(s=>`<option value="${s.key}" ${s.key===lead.status?'selected':''}>${s.label||s.key}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field-group">
+            <label>מקור</label>
+            <select onchange="updateField('${phone}','source',this.value)">
+              ${settings.sources.map(s=>`<option value="${s.key}" ${s.key===lead.source?'selected':''}>${s.label||s.key}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field-group">
+            <label>שם</label>
+            <input value="${lead.name||''}" onblur="updateField('${phone}','name',this.value)">
+          </div>
+          <div class="field-group">
+            <label>פולואפ הבא</label>
+            <input type="datetime-local" value="${lead.next_followup?lead.next_followup.slice(0,16):''}" onchange="updateField('${phone}','next_followup',this.value?new Date(this.value).toISOString():null)">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>תגיות</label>
+          <div class="tags-container">
+            ${settings.tags.map(t=>`<span class="tag-toggle ${leadTags.includes(t.key)?'active':''}" style="${leadTags.includes(t.key)?'border-color:'+t.color+';background:'+t.color+'20;color:'+t.color:''}" onclick="toggleTag(this,'${phone}','${t.key}','${t.color}')">${t.key}</span>`).join('')}
+          </div>
+        </div>
+        <div class="field-group">
+          <label>הערות</label>
+          <textarea onblur="updateField('${phone}','notes',this.value)">${lead.notes||''}</textarea>
+        </div>
+        <div style="text-align:center;color:#bbb;font-size:.78rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f5f5f5">
+          קשר ראשון: ${fmtDate(lead.first_contact)} &bull; סה"כ שולם: ${lead.total_paid||0}₪
+        </div>
       </div>
-    </details>
 
-    <details style="margin-top:1rem">
-      <summary style="cursor:pointer;font-weight:bold;color:var(--pink)">היסטוריית שיחה (${convos?.length||0})</summary>
-      <div class="chat-view">
-        ${(convos||[]).map(m=>`<div class="chat-msg ${m.role}"><div>${m.content}</div><div class="time">${fmtDate(m.created_at)}</div></div>`).join('')}
+      <!-- Timeline tab -->
+      <div id="mtab-timeline" class="hidden">
+        <div class="timeline">
+          ${(timeline||[]).map(e=>{
+            const cls = e.event_type;
+            let icon='📝', text='';
+            const data = typeof e.event_data === 'string' ? JSON.parse(e.event_data||'{}') : (e.event_data||{});
+            if(cls==='handoff'){icon='🔄';text='העברה למירב: '+(data.reason||'')}
+            else if(cls==='purchase'){icon='💰';text='רכישה: '+(data.course||'')+' — '+(data.amount||'')+'₪'}
+            else if(cls==='status_change'){icon='📊';text=(data.from||'—')+' → '+(data.to||'—')}
+            else if(cls==='note'){icon='📝';text=data.text||''}
+            else{text=JSON.stringify(data)}
+            return '<div class="timeline-item"><div class="timeline-dot '+cls+'">'+icon+'</div><div class="timeline-content"><div class="time">'+fmtDate(e.created_at)+'</div>'+text+'</div></div>';
+          }).join('')}
+        </div>
+        ${!timeline?.length ? '<div class="empty-state"><div class="icon">📋</div><p>אין אירועים</p></div>' : ''}
       </div>
-    </details>
 
-    <details style="margin-top:1rem">
-      <summary style="cursor:pointer;font-weight:bold;color:var(--green)">רכישות (${purchases?.length||0})</summary>
-      <div>
-        ${(purchases||[]).map(p=>`<div style="padding:.4rem 0;border-bottom:1px solid #eee">${p.course_name} — ${p.amount}₪ — ${fmtShortDate(p.purchased_at)}</div>`).join('')}
-        <button class="btn btn-green btn-small" style="margin-top:.5rem" onclick="showPurchaseForLead('${phone}')">+ הוסף רכישה</button>
+      <!-- Chat tab -->
+      <div id="mtab-chat" class="hidden">
+        <div class="chat-view">
+          ${(convos||[]).map(m=>`<div class="chat-msg ${m.role}"><div>${m.content}</div><div class="time">${fmtDate(m.created_at)}</div></div>`).join('')}
+        </div>
+        ${!convos?.length ? '<div class="empty-state"><div class="icon">💬</div><p>אין שיחות</p></div>' : ''}
       </div>
-    </details>
 
-    <div style="margin-top:1rem;text-align:center;color:#999;font-size:.8rem">
-      קשר ראשון: ${fmtDate(lead.first_contact)} | סה"כ שולם: ${lead.total_paid||0}₪
+      <!-- Purchases tab -->
+      <div id="mtab-purchases" class="hidden">
+        ${(purchases||[]).map(p=>`<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #f5f5f5">
+          <span>${p.course_name}</span><span style="font-weight:700;color:var(--green)">${p.amount}₪</span><span style="color:#999;font-size:.8rem">${fmtShortDate(p.purchased_at)}</span>
+        </div>`).join('')}
+        <button class="btn btn-green btn-small" style="margin-top:.8rem" onclick="showPurchaseForLead('${phone}')">+ הוסף רכישה</button>
+        ${!purchases?.length ? '<div class="empty-state"><div class="icon">🛒</div><p>אין רכישות</p></div>' : ''}
+      </div>
     </div>
   </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+}
+
+function showModalTab(btn, tabId) {
+  btn.closest('.modal').querySelectorAll('.modal-tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const body = btn.closest('.modal').querySelector('.modal-body');
+  body.querySelectorAll(':scope > div').forEach(d=>d.classList.add('hidden'));
+  body.querySelector('#'+tabId).classList.remove('hidden');
 }
 
 async function updateField(phone, field, value) {
@@ -469,8 +784,10 @@ async function updateField(phone, field, value) {
   toast('עודכן!');
 }
 
-async function toggleTag(el, phone, tag) {
+async function toggleTag(el, phone, tag, color) {
   el.classList.toggle('active');
+  if(el.classList.contains('active')) { el.style.borderColor=color; el.style.background=color+'20'; el.style.color=color; }
+  else { el.style.borderColor=''; el.style.background=''; el.style.color=''; }
   const tags = [...el.parentElement.querySelectorAll('.tag-toggle.active')].map(t=>t.textContent);
   await updateField(phone, 'tags', tags);
 }
@@ -479,14 +796,16 @@ async function toggleTag(el, phone, tag) {
 function showNewLeadModal() {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
-  modal.innerHTML = `<div class="modal" style="max-width:400px">
-    <h2>ליד חדש <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>
-    <div class="field-group"><label>טלפון</label><input id="nl-phone" dir="ltr" placeholder="972501234567"></div>
-    <div class="field-group"><label>שם</label><input id="nl-name"></div>
-    <div class="field-group"><label>מקור</label>
-      <select id="nl-source"><option value="manual">ידני</option><option value="referral">הפניה</option><option value="frontal">פרונטלי</option><option value="other">אחר</option></select>
+  modal.innerHTML = `<div class="modal" style="max-width:420px">
+    <div class="modal-header"><h2>ליד חדש</h2><button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field-group"><label>טלפון</label><input id="nl-phone" dir="ltr" placeholder="972501234567"></div>
+      <div class="field-group"><label>שם</label><input id="nl-name"></div>
+      <div class="field-group"><label>מקור</label>
+        <select id="nl-source">${settings.sources.map(s=>`<option value="${s.key}">${s.label||s.key}</option>`).join('')}</select>
+      </div>
+      <button class="btn btn-pink" style="width:100%;margin-top:1rem" onclick="createLead()">צור ליד</button>
     </div>
-    <button class="btn btn-pink" style="width:100%;margin-top:1rem" onclick="createLead()">צור ליד</button>
   </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
@@ -508,37 +827,39 @@ async function loadPurchases() {
   const purchases = await apiFetch('/purchases');
   if(!purchases) return;
   const total = purchases.reduce((s,p)=>s+Number(p.amount),0);
-  document.getElementById('purchasesTable').innerHTML = `
-    <div style="padding:.7rem;font-weight:bold">סה"כ: ${total.toLocaleString()}₪ (${purchases.length} רכישות)</div>
+  document.getElementById('purchasesTable').innerHTML = purchases.length ? `
+    <div style="padding:.8rem 1rem;font-weight:700;font-size:1rem;border-bottom:1px solid #f0f0f0">סה"כ: ${total.toLocaleString()}₪ <span style="color:#999;font-weight:400">(${purchases.length} רכישות)</span></div>
     <table>
     <tr><th>טלפון</th><th>קורס</th><th>סכום</th><th>תאריך</th><th>אמצעי</th></tr>
     ${purchases.map(p=>`<tr>
       <td dir="ltr" style="cursor:pointer" onclick="openLead('${p.lead_phone}')">${p.lead_phone}</td>
       <td>${p.course_name}</td>
-      <td>${p.amount}₪</td>
+      <td style="font-weight:600;color:var(--green)">${p.amount}₪</td>
       <td>${fmtShortDate(p.purchased_at)}</td>
       <td>${p.payment_method}</td>
     </tr>`).join('')}
-  </table>`;
+  </table>` : '<div class="empty-state"><div class="icon">🛒</div><p>אין רכישות עדיין</p></div>';
 }
 
 function showNewPurchaseModal(prefillPhone='') {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
-  modal.innerHTML = `<div class="modal" style="max-width:400px">
-    <h2>רכישה חדשה <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></h2>
-    <div class="field-group"><label>טלפון</label><input id="np-phone" dir="ltr" value="${prefillPhone}"></div>
-    <div class="field-group"><label>קורס</label>
-      <select id="np-course" onchange="npCourseChanged()">
-        <option value="">בחרי קורס...</option>
-        ${allCourses.map(c=>`<option value="${c.id}" data-name="${c.name}" data-price="${c.price}">${c.name} (${c.price})</option>`).join('')}
-        <option value="custom">אחר</option>
-      </select>
+  modal.innerHTML = `<div class="modal" style="max-width:420px">
+    <div class="modal-header"><h2>רכישה חדשה</h2><button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field-group"><label>טלפון</label><input id="np-phone" dir="ltr" value="${prefillPhone}"></div>
+      <div class="field-group"><label>קורס</label>
+        <select id="np-course" onchange="npCourseChanged()">
+          <option value="">בחרי קורס...</option>
+          ${allCourses.map(c=>`<option value="${c.id}" data-name="${c.name}" data-price="${c.price}">${c.name} (${c.price})</option>`).join('')}
+          <option value="custom">אחר</option>
+        </select>
+      </div>
+      <div class="field-group"><label>שם קורס (אם אחר)</label><input id="np-cname"></div>
+      <div class="field-group"><label>סכום (₪)</label><input id="np-amount" type="number"></div>
+      <div class="field-group"><label>הערות</label><input id="np-notes"></div>
+      <button class="btn btn-green" style="width:100%;margin-top:1rem" onclick="createPurchase()">שמור רכישה</button>
     </div>
-    <div class="field-group"><label>שם קורס (אם אחר)</label><input id="np-cname"></div>
-    <div class="field-group"><label>סכום (₪)</label><input id="np-amount" type="number"></div>
-    <div class="field-group"><label>הערות</label><input id="np-notes"></div>
-    <button class="btn btn-green" style="width:100%;margin-top:1rem" onclick="createPurchase()">שמור רכישה</button>
   </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
@@ -568,6 +889,61 @@ async function createPurchase() {
   document.querySelector('.modal-overlay').remove();
   toast('רכישה נשמרה!');
   if(currentTab==='purchases') loadPurchases();
+}
+
+// Settings
+function renderSettings() {
+  renderSettingGroup('settingsStatuses', settings.statuses, 'statuses');
+  renderSettingGroup('settingsTags', settings.tags, 'tags');
+  renderSettingGroup('settingsSources', settings.sources, 'sources');
+}
+
+function renderSettingGroup(containerId, items, type) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = items.map((item, i) => {
+    if (type === 'statuses') {
+      return `<div class="setting-item">
+        <input type="color" class="color-dot" value="${item.color||'#95a5a6'}" onchange="settings.statuses[${i}].color=this.value" style="width:30px;height:30px;border:none;padding:0;cursor:pointer">
+        <input value="${item.key}" onchange="settings.statuses[${i}].key=this.value;settings.statuses[${i}].label=this.value" placeholder="שם סטטוס">
+        <input value="${item.order||i+1}" type="number" style="width:50px" onchange="settings.statuses[${i}].order=parseInt(this.value)">
+        <span class="remove-btn" onclick="settings.statuses.splice(${i},1);renderSettings()">&times;</span>
+      </div>`;
+    } else if (type === 'tags') {
+      return `<div class="setting-item">
+        <input type="color" class="color-dot" value="${item.color||'#95a5a6'}" onchange="settings.tags[${i}].color=this.value" style="width:30px;height:30px;border:none;padding:0;cursor:pointer">
+        <input value="${item.key}" onchange="settings.tags[${i}].key=this.value" placeholder="שם תגית">
+        <span class="remove-btn" onclick="settings.tags.splice(${i},1);renderSettings()">&times;</span>
+      </div>`;
+    } else {
+      return `<div class="setting-item">
+        <input value="${item.key}" onchange="settings.sources[${i}].key=this.value" placeholder="מפתח" style="max-width:120px">
+        <input value="${item.label||''}" onchange="settings.sources[${i}].label=this.value" placeholder="תווית תצוגה">
+        <span class="remove-btn" onclick="settings.sources.splice(${i},1);renderSettings()">&times;</span>
+      </div>`;
+    }
+  }).join('');
+}
+
+function addSettingItem(type) {
+  if (type==='statuses') settings.statuses.push({key:'', label:'', color:'#95a5a6', order:settings.statuses.length+1});
+  else if (type==='tags') settings.tags.push({key:'', color:'#95a5a6'});
+  else settings.sources.push({key:'', label:''});
+  renderSettings();
+}
+
+async function saveSettings() {
+  // Filter out empty items
+  settings.statuses = settings.statuses.filter(s=>s.key);
+  settings.tags = settings.tags.filter(t=>t.key);
+  settings.sources = settings.sources.filter(s=>s.key);
+
+  await Promise.all([
+    apiFetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({setting_key:'statuses',setting_value:settings.statuses})}),
+    apiFetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({setting_key:'tags',setting_value:settings.tags})}),
+    apiFetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({setting_key:'sources',setting_value:settings.sources})}),
+  ]);
+  populateFilters();
+  toast('הגדרות נשמרו!');
 }
 </script>
 </body>
