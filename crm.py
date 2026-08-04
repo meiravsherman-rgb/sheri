@@ -236,6 +236,7 @@ header a:hover { color: #fff; }
 .stat-card:nth-child(3)::before { background: linear-gradient(90deg, var(--green), var(--teal)); }
 .stat-card:nth-child(4)::before { background: linear-gradient(90deg, var(--orange), var(--red)); }
 .stat-card:nth-child(5)::before { background: linear-gradient(90deg, var(--purple), var(--pink)); }
+.stat-card { cursor: pointer; }
 .stat-card .icon { font-size: 1.8rem; margin-bottom: .3rem; }
 .stat-card .number { font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, var(--pink), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .stat-card .label { color: #999; font-size: .82rem; margin-top: .3rem; }
@@ -519,6 +520,27 @@ function showTab(tab) {
   if (tab==='settings') renderSettings();
 }
 
+function goToLeads(statusFilter) {
+  // Switch to leads tab with optional status filter
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[id^="tab-"]').forEach(d=>d.classList.add('hidden'));
+  document.getElementById('tab-leads').classList.remove('hidden');
+  document.querySelectorAll('.nav button')[1].classList.add('active');
+  currentTab = 'leads';
+  if (statusFilter) document.getElementById('statusFilter').value = statusFilter;
+  else document.getElementById('statusFilter').value = '';
+  loadLeads();
+}
+
+function goToPurchases() {
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[id^="tab-"]').forEach(d=>d.classList.add('hidden'));
+  document.getElementById('tab-purchases').classList.remove('hidden');
+  document.querySelectorAll('.nav button')[2].classList.add('active');
+  currentTab = 'purchases';
+  loadPurchases();
+}
+
 function toast(msg) {
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('visible');
   setTimeout(()=>t.classList.remove('visible'),2500);
@@ -568,11 +590,11 @@ async function loadDashboard() {
   const d = await apiFetch('/dashboard');
   if(!d) return;
   document.getElementById('statsGrid').innerHTML = `
-    <div class="stat-card"><div class="icon">👥</div><div class="number">${d.total_leads}</div><div class="label">סה"כ לידים</div></div>
-    <div class="stat-card"><div class="icon">✨</div><div class="number">${d.new_this_month}</div><div class="label">חדשים החודש</div></div>
-    <div class="stat-card"><div class="icon">💰</div><div class="number">${d.month_revenue.toLocaleString()}₪</div><div class="label">הכנסות החודש</div></div>
-    <div class="stat-card"><div class="icon">📊</div><div class="number">${d.conversion_rate}%</div><div class="label">שיעור המרה</div></div>
-    <div class="stat-card"><div class="icon">🏦</div><div class="number">${d.total_revenue.toLocaleString()}₪</div><div class="label">הכנסות סה"כ</div></div>
+    <div class="stat-card" onclick="goToLeads()"><div class="icon">👥</div><div class="number">${d.total_leads}</div><div class="label">סה"כ לידים</div></div>
+    <div class="stat-card" onclick="goToLeads('חדש')"><div class="icon">✨</div><div class="number">${d.new_this_month}</div><div class="label">חדשים החודש</div></div>
+    <div class="stat-card" onclick="goToPurchases()"><div class="icon">💰</div><div class="number">${d.month_revenue.toLocaleString()}₪</div><div class="label">הכנסות החודש</div></div>
+    <div class="stat-card" onclick="goToLeads('נרשמה')"><div class="icon">📊</div><div class="number">${d.conversion_rate}%</div><div class="label">שיעור המרה</div></div>
+    <div class="stat-card" onclick="goToPurchases()"><div class="icon">🏦</div><div class="number">${d.total_revenue.toLocaleString()}₪</div><div class="label">הכנסות סה"כ</div></div>
   `;
 
   // Funnel from settings
@@ -581,7 +603,7 @@ async function loadDashboard() {
   document.getElementById('funnelBars').innerHTML = orderedStatuses.map(s=>{
     const count = d.funnel[s.key]||0;
     const pct = Math.max(count/maxCount*100, 5);
-    return `<div class="funnel-step">
+    return `<div class="funnel-step" style="cursor:pointer" onclick="goToLeads('${s.key}')">
       <span class="f-label">${s.label||s.key}</span>
       <div class="f-bar-bg"><div class="f-bar" style="width:${pct}%;background:${s.color}">${count}</div></div>
     </div>`;
