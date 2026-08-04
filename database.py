@@ -214,13 +214,17 @@ def upsert_lead_from_message(phone: str, name: str) -> None:
     """Create lead if new, update last_contact if existing."""
     now = _now()
     headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
-    httpx.post(_url("leads"), headers=headers, json={
-        "phone": phone,
-        "name": name,
-        "last_contact": now,
-        "first_contact": now,
-        "updated_at": now,
-    }).raise_for_status()
+    httpx.post(
+        _url("leads") + "?on_conflict=phone",
+        headers=headers,
+        json={
+            "phone": phone,
+            "name": name,
+            "last_contact": now,
+            "first_contact": now,
+            "updated_at": now,
+        },
+    ).raise_for_status()
 
 
 def get_leads(status: str = "", search: str = "", tag: str = "") -> list[dict]:
