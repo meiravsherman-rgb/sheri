@@ -22,6 +22,12 @@ def request_human_handoff(chat_id: str, reason: str, summary: str) -> str:
     )
     try:
         send_reply(MANAGER_PHONE, notification)
+        # Log handoff event in CRM
+        try:
+            from database import log_lead_event
+            log_lead_event(chat_id, "handoff", {"reason": reason, "summary": summary})
+        except Exception:
+            pass
         return f"העברתי את הפרטים ל{MANAGER_NAME}. היא תיצור איתך קשר בהקדם."
     except Exception as e:
         return f"לא הצלחתי להעביר את ההודעה ל{MANAGER_NAME} ({e}). אנא נסי שוב מאוחר יותר."

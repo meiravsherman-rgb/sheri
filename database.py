@@ -206,3 +206,161 @@ def build_rules_text() -> str:
     for i, r in enumerate(rules, 1):
         lines.append(f"{i}. **{r['title']}:** {r['body']}")
     return "\n".join(lines)
+
+
+# ── Leads CRUD ─────────────────────────────────────────────────────
+
+def upsert_lead_from_message(phone: str, name: str) -> None:
+    """Create lead if new, update last_contact if existing."""
+    now = _now()
+    headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
+    httpx.post(_url("leads"), headers=headers, json={
+        "phone": phone,
+        "name": name,
+        "last_contact": now,
+        "first_contact": now,
+        "updated_at": now,
+    }).raise_for_status()
+
+
+def get_leads(status: str = "", search: str = "", tag: str = "") -> list[dict]:
+    params = {"select": "*", "order": "last_contact.desc"}
+    if status:
+        params["status"] = f"eq.{status}"
+    if search:
+        params["or"] = f"(name.ilike.%{search}%,phone.ilike.%{search}%)"
+    if tag:
+        params["tags"] = f"cs.{{{tag}}}"
+    r = httpx.get(_url("leads"), headers=_get_headers(), params=params)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_lead(phone: str) -> dict | None:
+    r = httpx.get(_url("leads"), headers=_get_headers(), params={
+        "select": "*", "phone": f"eq.{phone}", "limit": "1",
+    })
+    r.raise_for_status()
+    rows = r.json()
+    return rows[0] if rows else None
+
+
+def update_lead(phone: str, **fields) -> None:
+    fields["updated_at"] = _now()
+    httpx.patch(_url("leads"), headers=_get_headers(), params={"phone": f"eq.{phone}"}, json=fields).raise_for_status()
+
+
+def create_lead_manual(phone: str, name: str, source: str = "manual") -> None:
+    now = _now()
+    httpx.post(_url("leads"), headers=_get_headers(), json={
+        "phone": phone, "name": name, "source": source,
+        "first_contact": now, "last_contact": now, "updated_at": now,
+    }).raise_for_status()
+
+
+# ── Lead Events ────────────────────────────────────────────────────
+
+def log_lead_event(phone: str, event_type: str, event_data: dict = None) -> None:
+    import json
+    httpx.post(_url("lead_events"), headers=_get_headers(), json={
+        "lead_phone": phone,
+        "event_type": event_type,
+        "event_data": json.dumps(event_data or {}, ensure_ascii=False),
+        "created_at": _now(),
+    }).raise_for_status()
+
+
+def get_lead_timeline(phone: str, limit: int = 50) -> list[dict]:
+    r = httpx.get(_url("lead_events"), headers=_get_headers(), params={
+        "select": "*",
+        "lead_phone": f"eq.{phone}",
+        "order": "created_at.desc",
+        "limit": str(limit),
+    })
+    r.raise_for_status()
+    return r.json()
+
+
+def get_lead_conversations(phone: str, limit: int = 50) -> list[dict]:
+    r = httpx.get(_url("conversations"), headers=_get_headers(), params={
+        "select": "role,content,created_at",
+        "chat_id": f"eq.{phone}",
+        "order": "id.desc",
+        "limit": str(limit),
+    })
+    r.raise_for_status()
+    return list(reversed(r.json()))
+
+
+# ── Purchases ──────────────────────────────────────────────────────
+
+def create_purchase(lead_phone: str, course_name: str, amount: float,
+                    course_id: int = None, payment_method: str = "cardcom",
+                    notes: str = "") -> int:
+    now = _now()
+    data = {
+        "lead_phone": lead_phone, "course_name": course_name, "amount": amount,
+        "payment_method": payment_method, "notes": notes,
+        "purchased_at": now, "created_at": now,
+    }
+    if course_id:
+        data["course_id"] = course_id
+    r = httpx.post(_url("purchases"), headers=_get_headers(), json=data)
+    r.raise_for_status()
+    purchase_id = r.json()[0]["id"]
+    # Update lead total_paid
+    lead = get_lead(lead_phone)
+    if lead:
+        new_total = float(lead.get("total_paid", 0) or 0) + amount
+        update_lead(lead_phone, total_paid=new_total)
+    return purchase_id
+
+
+def get_purchases(lead_phone: str = "") -> list[dict]:
+    params = {"select": "*", "order": "purchased_at.desc"}
+    if lead_phone:
+        params["lead_phone"] = f"eq.{lead_phone}"
+    r = httpx.get(_url("purchases"), headers=_get_headers(), params=params)
+    r.raise_for_status()
+    return r.json()
+
+
+# ── Dashboard Stats ────────────────────────────────────────────────
+
+def get_dashboard_stats() -> dict:
+    """Get summary stats for CRM dashboard."""
+    leads = get_leads()
+    total = len(leads)
+
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    new_this_month = sum(1 for l in leads if l.get("created_at", "") >= month_start)
+
+    # Status funnel
+    funnel = {}
+    for l in leads:
+        s = l.get("status", "חדש")
+        funnel[s] = funnel.get(s, 0) + 1
+
+    # Revenue
+    all_purchases = get_purchases()
+    total_revenue = sum(float(p.get("amount", 0)) for p in all_purchases)
+    month_revenue = sum(float(p.get("amount", 0)) for p in all_purchases if p.get("purchased_at", "") >= month_start)
+
+    # Conversion
+    registered = funnel.get("נרשמה", 0) + funnel.get("לקוחה", 0)
+    conversion = round(registered / total * 100, 1) if total > 0 else 0
+
+    # Upcoming followups
+    followups = [l for l in leads if l.get("next_followup")]
+    followups.sort(key=lambda l: l["next_followup"])
+
+    return {
+        "total_leads": total,
+        "new_this_month": new_this_month,
+        "month_revenue": month_revenue,
+        "total_revenue": total_revenue,
+        "conversion_rate": conversion,
+        "funnel": funnel,
+        "upcoming_followups": followups[:5],
+    }

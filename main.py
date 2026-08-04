@@ -14,8 +14,9 @@ from config import (
     WHATSAPP_PHONE_NUMBER_ID,
     WHATSAPP_VERIFY_TOKEN,
 )
-from database import init_db, is_seen, mark_seen
+from database import init_db, is_seen, mark_seen, upsert_lead_from_message
 from admin import router as admin_router
+from crm import router as crm_router
 from seed_db import seed
 from tools.whatsapp import send_reply, mark_as_read
 
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="שרי הבוטית", lifespan=lifespan)
 app.include_router(admin_router)
+app.include_router(crm_router)
 
 
 # ── Chat simulator API ────────────────────────────────────────────
@@ -65,6 +67,7 @@ class ResetRequest(BaseModel):
 async def api_chat(req: ChatRequest):
     """Chat simulator endpoint — same agent, no WhatsApp."""
     try:
+        upsert_lead_from_message(req.phone, req.name)
         from agent import handle_message
         reply = handle_message(req.phone, req.name, req.message)
         return {"reply": reply}
@@ -195,6 +198,12 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
             break
 
     logger.info(f"Message from {sender_phone} ({sender_name}): {text[:50]}...")
+
+    # Track lead in CRM
+    try:
+        upsert_lead_from_message(sender_phone, sender_name)
+    except Exception as e:
+        logger.warning(f"Failed to upsert lead: {e}")
 
     # Mark as read
     try:
