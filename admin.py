@@ -1,7 +1,8 @@
 """Admin panel — API routes + HTML interface for Merav."""
 
+import io
 import os
-from fastapi import APIRouter, Request, Response, Depends, HTTPException
+from fastapi import APIRouter, Request, Response, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from database import (
@@ -144,6 +145,47 @@ async def api_upsert_rule(req: RuleRequest):
 async def api_delete_rule(rule_key: str):
     delete_rule(rule_key)
     return {"ok": True}
+
+
+# ── Document Upload API ──────────────────────────────────────────
+
+def _extract_text(filename: str, content: bytes) -> str:
+    """Extract text from uploaded file."""
+    lower = filename.lower()
+    if lower.endswith(".txt") or lower.endswith(".md"):
+        return content.decode("utf-8", errors="replace")
+    elif lower.endswith(".pdf"):
+        try:
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(content)) as pdf:
+                pages = [p.extract_text() or "" for p in pdf.pages]
+            return "\n\n".join(pages).strip()
+        except ImportError:
+            raise HTTPException(status_code=500, detail="PDF support not installed")
+    elif lower.endswith(".docx"):
+        try:
+            import docx
+            doc = docx.Document(io.BytesIO(content))
+            return "\n".join(p.text for p in doc.paragraphs).strip()
+        except ImportError:
+            raise HTTPException(status_code=500, detail="DOCX support not installed")
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {filename}")
+
+
+@router.post("/api/upload", dependencies=[Depends(check_auth)])
+async def api_upload_document(file: UploadFile = File(...)):
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:  # 5MB limit
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    text = _extract_text(file.filename, content)
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="No text found in document")
+    # Store as a content section with doc_ prefix
+    section_key = f"doc_{int(__import__('time').time())}"
+    title = file.filename.rsplit(".", 1)[0]  # filename without extension
+    upsert_section(section_key, title, text)
+    return {"ok": True, "section_key": section_key, "title": title, "chars": len(text)}
 
 
 # ── Admin HTML page ───────────────────────────────────────────────
@@ -293,6 +335,7 @@ textarea { min-height: 80px; resize: vertical; }
     <div class="sub-tab" onclick="switchSubTab('info','courses')">קורסים ומחירים</div>
     <div class="sub-tab" onclick="switchSubTab('info','faq')">שאלות ותשובות</div>
     <div class="sub-tab" onclick="switchSubTab('info','notes')">הערות חופשיות</div>
+    <div class="sub-tab" onclick="switchSubTab('info','docs')">העלאת מסמכים</div>
 </div>
 
 <!-- Sub-tabs for BEHAVIOR area -->
@@ -343,6 +386,27 @@ textarea { min-height: 80px; resize: vertical; }
     </div>
     <p class="section-desc">מקום חופשי להוסיף כל מידע שתרצי שהבוט ידע - טיפים, מידע על מוצרים, סיפורי לקוחות, תוכן ממסמכים, או כל דבר אחר. פשוט כתבי כותרת ותוכן.</p>
     <div id="notesList"></div>
+</div>
+
+<!-- ── Document Upload ── -->
+<div class="section" id="sec-docs">
+    <div class="section-header">
+        <h2>העלאת מסמכים</h2>
+    </div>
+    <p class="section-desc">העלי מסמכים (PDF, Word, טקסט) והבוט ילמד את התוכן שלהם אוטומטית. המסמכים יופיעו בטאב "תוכן ומידע" ותוכלי לערוך אותם גם אחרי ההעלאה.</p>
+
+    <div class="card">
+        <div style="border:2px dashed #e8ddd5;border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;" id="dropZone" onclick="document.getElementById('fileInput').click()" ondrop="handleDrop(event)" ondragover="event.preventDefault();this.style.borderColor='#d4838f';this.style.background='#fef9f7'" ondragleave="this.style.borderColor='#e8ddd5';this.style.background='transparent'">
+            <div style="font-size:48px;margin-bottom:12px;">&#128196;</div>
+            <p style="font-size:16px;color:#666;margin-bottom:8px;">גררי לכאן מסמך או לחצי לבחור</p>
+            <p style="font-size:13px;color:#aaa;">PDF, Word (.docx), טקסט (.txt, .md) | עד 5MB</p>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" style="display:none" onchange="uploadFile(this.files[0])">
+        </div>
+        <div id="uploadStatus" style="margin-top:12px;display:none;"></div>
+    </div>
+
+    <h3 style="margin:20px 0 12px;color:#555;">מסמכים שהועלו</h3>
+    <div id="docsList"></div>
 </div>
 
 </div><!-- /area-info -->
@@ -576,9 +640,11 @@ async function loadContent() {
 function renderSections() {
     const el = document.getElementById('contentList');
     const notesEl = document.getElementById('notesList');
-    // Separate regular sections from custom notes (notes have key starting with 'note_')
-    const regular = sectionsData.filter(s => !s.section_key.startsWith('note_'));
+    const docsEl = document.getElementById('docsList');
+    // Separate: regular content, notes (note_*), uploaded docs (doc_*)
+    const regular = sectionsData.filter(s => !s.section_key.startsWith('note_') && !s.section_key.startsWith('doc_'));
     const notes = sectionsData.filter(s => s.section_key.startsWith('note_'));
+    const docs = sectionsData.filter(s => s.section_key.startsWith('doc_'));
 
     if (!regular.length) {
         el.innerHTML = '<div class="empty"><p>אין תוכן עדיין</p><button class="btn btn-add" onclick="addSection()">+ הוסיפי נושא ראשון</button></div>';
@@ -590,6 +656,12 @@ function renderSections() {
         notesEl.innerHTML = '<div class="empty"><p>אין הערות עדיין</p><button class="btn btn-add" onclick="addNote()">+ הוסיפי הערה ראשונה</button></div>';
     } else {
         notesEl.innerHTML = notes.map(s => sectionCard(s)).join('');
+    }
+
+    if (!docs.length) {
+        docsEl.innerHTML = '<div class="empty"><p>טרם הועלו מסמכים</p></div>';
+    } else {
+        docsEl.innerHTML = docs.map(s => sectionCard(s)).join('');
     }
 }
 
@@ -717,6 +789,38 @@ async function saveFeedbackRule(key) {
     const data = { rule_key: key, title: titles[key] || key, body: body, is_active: body.trim() ? 1 : 0 };
     await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
     showStatus('המשוב נשמר');
+}
+
+// ── Document Upload ──
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').style.borderColor = '#e8ddd5';
+    document.getElementById('dropZone').style.background = 'transparent';
+    if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+}
+
+async function uploadFile(file) {
+    if (!file) return;
+    const statusEl = document.getElementById('uploadStatus');
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<p style="color:#1565c0;">מעלה ומעבד את המסמך...</p>';
+
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch(API + '/upload', { method: 'POST', body: formData });
+        if (!res.ok) {
+            const err = await res.json();
+            statusEl.innerHTML = '<p style="color:#c62828;">' + esc(err.detail || 'שגיאה בהעלאה') + '</p>';
+            return;
+        }
+        const data = await res.json();
+        statusEl.innerHTML = '<p style="color:#2e7d32;">המסמך "' + esc(data.title) + '" הועלה בהצלחה (' + data.chars + ' תווים). הבוט ישתמש בתוכן הזה בתשובות.</p>';
+        document.getElementById('fileInput').value = '';
+        loadContent();
+    } catch(e) {
+        statusEl.innerHTML = '<p style="color:#c62828;">שגיאה: ' + esc(e.message) + '</p>';
+    }
 }
 
 // ── Helpers ──
