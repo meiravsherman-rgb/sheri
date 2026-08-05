@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>יומן פרומפטים — שרי הבוטית (Sherman Bot)</title>
 <style>
-:root { --pink: #e91e8c; --blue: #3498db; --green: #27ae60; --gray: #666; --bg: #f8f5ff; }
+:root { --pink: #e91e8c; --blue: #3498db; --green: #27ae60; --gray: #666; --bg: #f8f5ff; --context: #8e24aa; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: #333; direction: rtl; max-width: 900px; margin: 0 auto; padding: 1rem; }
 header { background: linear-gradient(135deg, var(--pink), #c2185b, #8e24aa); color: #fff; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; text-align: center; }
@@ -29,6 +29,8 @@ header p { opacity: .85; font-size: .95rem; }
 .prompt-text { font-size: .92rem; line-height: 1.6; white-space: pre-wrap; margin-bottom: .6rem; }
 .prompt-summary { background: #f0f7ff; border-radius: 8px; padding: .5rem .8rem; font-size: .82rem; color: #555; border-right: 3px solid var(--blue); }
 .prompt-summary strong { color: var(--blue); }
+.prompt-context { background: #f3e5f5; border-radius: 8px; padding: .5rem .8rem; font-size: .82rem; color: #555; border-right: 3px solid var(--context); margin-bottom: .4rem; }
+.prompt-context strong { color: var(--context); }
 .tag { display: inline-block; padding: .15rem .5rem; border-radius: 10px; font-size: .7rem; font-weight: 600; margin-left: .3rem; }
 .tag-skill { background: #f3e5f5; color: #8e24aa; }
 .tag-agent { background: #e8f5e9; color: #2e7d32; }
@@ -62,6 +64,7 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">1</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> (פרומפט ראשון — פתיחת הפרויקט. לא היתה שאלה קודמת)</div>
 <div class="prompt-text">אני רוצה לבנות בוט לעסק שעוסק בשיטת שרמן שמקל על כאבי ווסת. פרטים כאן https://www.msherman.co.il/
 בתור התחלה אני רוצה ליצור בוט וואטסאפ אשר לקוחות ולידים יוכלו לתקשר איתו, דרך וואטסאפ רשמי בלבד בשביל שלא ייחסם המספר שאשתמש בו, ובבוט הזה יינתן מידע על שיטת שרמן ויוביל אותם לפגישה או שיחה או הרשמה לקורס ללמוד זאת או לקורס המדריכות. אצרף בהמשך גם קובץ על הלוגיקה עם כל המידע הדרוש אך בתור התחלה אני רוצה לעבוד עם בעלת העסק וליצור לה את הבוט AI הזה בצורה כזאת שכל מה שצריך יישב אצלה ורק הקידוד דרך CLAUDE CODE ייעשה מכאן אך לא יהיה תלוי בשום דבר מכאן כך שהכל צריך לשבת בענן כאשר הלקוחה מירב היא זאת שתפתח את החשבונות איפה שצריך ותשלם את התשלומים החודשיים. לצורך התחלת העבודה, אני צריך להכין אותה למה בדיוק היא צריכה לעשות לפני מבחינת פתיחת חשבונות, מה העלויות שיהיו לה, וכל דבר שצריך בשביל שהבוט יתפקד מול API רשמי של וואטסאפ ויענה ללקוחות ולידים ויתן להם מידע ויוביל אותם למכירה. לשם כך אתה גם תצטרך להשתמש בסקילים שהטענתי לך שרלוונטים לכך ולצורך התכנון תעזר בהם. אך גם צירפתי כאן קובץ שמסכם דברים שלמדתי בקורס שהוא הבסיס ליצירת בוט וואסאפ אז תיעזר בו. לא הכל רלוונטי כי הוא מדבר על GREEN API ואני רוצה רשמי והוא מדבר על עוזר אישי ואני רוצה שירות ללקוחות שפונים ממספרים שונים ולא מוכרים. צור לי את תוכנית העבודה. שלב שלב. קודם מה אני צריך להכין מראש, מה הלקוחה צריכה להכין מראש, אילו חשבונות וכלים נשתמש וצריך לפתוח להם חשבון, מה העלויות, וכל דבר שנדרש מראש, ואז פרט גם את השלבים הבאים עד ליצירת בוט עובד מול הלקוחה מירב. תכנן ותגיד לי אם אתה צריך משהו ממני</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תוכנית עבודה מלאה — WhatsApp Bot עם Meta Cloud API, FastAPI, Supabase, Render. רשימת חשבונות לפתוח, עלויות, שלבים מ-0 עד בוט עובד <span class="tag tag-skill">wa-characterize</span></div>
@@ -77,24 +80,28 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">2</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> (פתיחת סשן חדש — המשך מסשן קודם)</div>
 <div class="prompt-text">אני רוצה להמשיך לעבוד איתך על SHERMAN-BOT</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> פתיחת סשן חדש, טעינת הקשר הפרויקט</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">3</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציג תוכנית עבודה ושאל "מתי הפגישה? אני אכין לך רשימת מטלות מסודרת"</div>
 <div class="prompt-text">קבעתי פגישה עם מירב. בפגישה מירב תביא לי את כל מאגרי הידע שלה, ונפתח ביחד את החשבונות. אני רוצה לדעת כיצד הפגישה תתנהל, היכן נשים את כל המידע, כיצד נאפיין ביחד את הבוט? ומה עוד נצטרך לעשות ביחד לפני שאתחיל את שלב בניית הבוט?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תוכנית פגישה מסודרת — רשימת חשבונות לפתוח, מידע לאסוף ממירב, סדר העבודה</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">4</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציג תוכנית פגישה שכללה deploy ל-Render ועבודה מול סקיל wa-characterize</div>
 <div class="prompt-text">האם נוכל להתחיל גם בלי להשתמש ב-RENDER כי זה לא LIVE אז אפשר רק כשהמחשב פתוח. אני רוצה להבין כיצד אני מתנהל מולה בפגישה? האם אני עובד מולך ומתקשר איתה כל שלב? האם אתה תנחה אותי מה לשאול אותה שלב אחרי שלב ותתעד זאת? האם אתה משתמש ב-SKILL המתאים לבניית בוט הוואטסאפ? (זה מה שאני רוצה ממך). לאן מירב צריכה להעלות את כל מאגרי המידע ובאיזה אופן? כלומר האם אני מעלה אותם אליך ואתה מעלה ל-SUPABASE או שהיא או אני מעלים אותם לשם באופן עצמאי?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הגדרת תהליך עבודה — רפי עובד מול Claude Code, מירב מספקת מידע. הבוט ירוץ מקומית לבדיקות לפני Render</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">5</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> סקיל wa-characterize שאל: "מה שם הבוט? מה המגדר? מה הטון? מה הודעת הפתיחה?"</div>
 <div class="prompt-text">השם זה שרי הבוטית, הבוט יהיה נקבה. "היי {{first_name}}, ברוכה הבאה
 אני שמחה על העניין שאת מגלה בשיטת שרמן — בריאות נשית טבעית.
 
@@ -109,6 +116,7 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">6</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> סקיל wa-characterize שאל: "יש כללי התנהגות נוספים? מה הבוט צריך להימנע ממנו?"</div>
 <div class="prompt-text">לגבי האיפיון — שלא יהיו תשובות מוחלטות אלא בסגנון של 'מקווה', 'רוצה' וכד'.
 אם תזהה ספאם או שאתה בספק לגבי אמיתות המספר או הזהות אז תעביר אל מירב.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> כלל התנהגות — שפה רכה, הימנעות מקביעות מוחלטות, סינון ספאם</div>
@@ -116,6 +124,7 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">7</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> סקיל wa-characterize שאל: "מה מאגר הידע של הבוט? ספרי על השיטה, הקורסים, התוכן"</div>
 <div class="prompt-text">שיטת שרמן (קיימת מאז שנת 2004), באה מתחום הבריאות הטבעית והרפואה המונעת, מאפשרת לך להכיר את גופך,
 מעודדת החזרה של הווסת למסלולה הטבעי והגברת החיבור לתבונה הנשית שלך.
 רוב הנשים שעברו את התהליך חוו גם:
@@ -137,6 +146,7 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">8</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> סקיל wa-characterize שאל: "אילו כלים הבוט צריך? (העברה לאדם, יומן, מייל, תזכורות)"</div>
 <div class="prompt-text">העברה למירב — כן — לשלוח למירב וואטסאפ למספר 0503189636 עם פרטי הלקוחה ומדוע זה מופנה למירב.
 יומן גוגל — כן — למי שרוצה לקבוע פגישה.
 מייל — אין צורך לקבל מייל על כל שיחה.
@@ -146,12 +156,14 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">9</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude שאל: "מה קורה כשלבוט אין תשובה ממאגר הידע?"</div>
 <div class="prompt-text">תעביר למענה אנושי של מירב גם אם היא לא מוצאת מענה אצל הבוטית ולבוטית אין תשובה מתוך המידע הקיים לה.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> כלל התנהגות — העברה אוטומטית למירב כשאין תשובה</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">10</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude סיים את האיפיון הבסיסי ושאל: "יש עוד מידע או כללים שקיבלת ממירב?"</div>
 <div class="prompt-text">אני מדביק פה מידע נוסף שקיבלתי ממירב (תובנות משימוש בבוט לא חכם):
 
 # זהות וטון דיבור
@@ -173,6 +185,7 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 
 <div class="prompt-card">
 <span class="prompt-num">11</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> סקיל wa-characterize שאל: "מה הקורסים, המחירים, וקישורי הרכישה?"</div>
 <div class="prompt-text">הנה הקישורים:
 
 שרמן לנשים — יסודות שיטת שרמן — 540₪
@@ -211,6 +224,7 @@ https://secure.cardcom.solutions/EA/EA5/zBeZWXV...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">12</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> סקיל wa-build ביקש: "צרו repo ב-GitHub. מה השם שתרצו?"</div>
 <div class="prompt-text">repository name: sheri
 מוכן</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> יצירת repo ב-GitHub (meiravsherman-rgb/sheri), push קוד הבוט <span class="tag tag-skill">wa-build</span></div>
@@ -218,6 +232,7 @@ https://secure.cardcom.solutions/EA/EA5/zBeZWXV...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">13</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביקש: "מירב צריכה לאשר את ה-repo. מה מופיע לה במסך?"</div>
 <div class="prompt-text">זה מה שמופיע לה
 meiravsherman-rgb/sheri: whatsapp bot</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> אישור שה-repo נוצר נכון בחשבון של מירב</div>
@@ -225,6 +240,7 @@ meiravsherman-rgb/sheri: whatsapp bot</div>
 
 <div class="prompt-card">
 <span class="prompt-num">14</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביקש: "פתחו פרויקט Supabase ושלחו לי את ה-Key, Secret ו-URL"</div>
 <div class="prompt-text">Key: sb_publishable_3aT2...
 Secret: sb_secret_7hI0...
 Project URL: https://tfcfwtkaiumivkcylrpw.supabase.co</div>
@@ -233,24 +249,28 @@ Project URL: https://tfcfwtkaiumivkcylrpw.supabase.co</div>
 
 <div class="prompt-card">
 <span class="prompt-num">15</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציע ליצור אפליקציית Meta חדשה בשם אחר כי לא מצא את sheri_bot</div>
 <div class="prompt-text">לא. זה כבר היה עם SHERI_BOT והצליח. תחפור ותסתכל רגע בהסטוריה אחרונה בצ'אט זה</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תיקון — חזרה לאפליקציית Meta הנכונה (sheri_bot) במקום ליצור חדשה <span class="tag tag-fix">fix</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">16</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציע פתרון טכני לעקיפת 2FA ב-Meta Business</div>
 <div class="prompt-text">לפני זה. אני רוצה לוודא שאין פתרון דרך ה-UI. האימות הדו שלבי בוטל לדעתי</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> בדיקת Meta Business 2FA — ניסיון לפתור דרך ה-UI לפני פתרון טכני <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">17</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude פירט רשימה של צעדים טכניים (system user, token, webhook) בלי להסביר מה נדרש מהמשתמש</div>
 <div class="prompt-text">לא הבנתי מה הצעדים הבאים. אתה צריך עוד מידע ממני וממירב בשביל להתחיל לעבוד?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> סיכום מה חסר — Phone Number ID, Access Token, Verify Token מ-Meta Dashboard</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">18</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> (יוזמת משתמש — רצה סקיל נוסף לבניית הבוט)</div>
 <div class="prompt-text">בהקשר לבוט הזה של מירב, אני רוצה להתקין סקיל חדש ונוסף שיכול לעזור לבנות מה שצריך. תתקין זאת מפה:
 https://github.com/peleg-jpg/grill-me-skill</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> התקנת סקיל grill-me-skill <span class="tag tag-skill">skill-installer</span></div>
@@ -258,24 +278,28 @@ https://github.com/peleg-jpg/grill-me-skill</div>
 
 <div class="prompt-card">
 <span class="prompt-num">19</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביקש: "מה השם שנתתם לאפליקציה ב-Meta Developer?"</div>
 <div class="prompt-text">יצרתי בשם sheri_bot</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> אישור שם אפליקציית Meta — sheri_bot. המשך הגדרת WhatsApp Cloud API</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">20</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציג שלב חיבור WhatsApp API והתחיל להתקין קוד</div>
 <div class="prompt-text">אני אתקין. לפני כן אני רוצה רגע לוודא לגבי מה הולך להיות — האם הבוט ישר יתחיל לעבוד מול הוואטסאפ של הבוט? 055-9214985? כלומר אם עכשיו יש על זה כבר בוט פעיל אז זה יחליף אותו?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הבהרה — הבוט הישן (לא חכם) יוחלף, אותו מספר. אפשר להתחיל עם מספר test של Meta <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">21</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> (יוזמת משתמש — רצה סקירת סקילים לפני המשך)</div>
 <div class="prompt-text">לפני שאנחנו ממשיכים. אתה יכול לעבור על כל הסקילים ולוודא מהם הסקילים שמתאימים כרגע ליצירת הבוט וואטסאפ?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> סקירת כל הסקילים המותקנים — זוהו: wa-characterize, wa-build, wa-deploy, wa-connect, whatsapp-cloud-api, crm-marketing, impeccable</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">22</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude דיווח: "חשבון Anthropic של מירב ריק — צריך להוסיף קרדיטים כדי שהבוט יוכל לענות"</div>
 <div class="prompt-text">מירב הוסיפה קרדיטים אז אתה יכול להמשיך</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> המשך עבודה — מירב הוסיפה קרדיטים לחשבון Anthropic, בניית הקוד ממשיכה <span class="tag tag-skill">wa-build</span></div>
 </div>
@@ -290,30 +314,35 @@ https://github.com/peleg-jpg/grill-me-skill</div>
 
 <div class="prompt-card">
 <span class="prompt-num">23</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude סיים לבנות את הקוד והציע: "אפשר לבדוק מקומית עם smoke test"</div>
 <div class="prompt-text">כיצד אני יכול לערוך בדיקות המדמות משתמש שרושם לבוט ומקבל תשובות. אני רוצה לעשות זאת כשלב ראשון דרך כאן. לשלוח הודעה לבוט לקבל תשובה ולהתכתב איתו כל פעם מחדש כמשתמש אחר</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> יצירת smoke test מקומי — שליחת הודעות לבוט דרך סקריפט Python, אימות תשובות</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">24</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הריץ בדיקה מקומית שהצליחה ושאל: "רוצה לבדוק עוד תרחישים?"</div>
 <div class="prompt-text">צור לי את הסימולטור הזה במקום שאוכל לגשת אליו ועל שרת שגם מירב תוכל לגשת אליו, כזה שידמה משתמש אמיתי שאוכל לשלוח הודעה ולקבל תשובה כמו שהבוט יגיב במצב אמיתי. מהתחלת שיחה ועד סופה. שלח לי את הקישור לסימולטור זה שיישב על הרשת ולא מקומי</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> Chat Simulator בדף HTML ב-/simulator על Render — ממשק בדיקות ללא WhatsApp <span class="tag tag-feature">simulator</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">25</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציע להעלות ל-Render דרך GitHub</div>
 <div class="prompt-text">מה זה אומר אם תעלה ישירות ל-RENDER בלי GITHUB. מבחינת אמינות, ממשק, עלות?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הסבר — Render ללא GitHub אפשרי (Docker/CLI) אבל מאבד version control, rollback, ו-CI/CD. הוחלט להשאר עם GitHub <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">26</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude יצר שירות ב-Render ושאל: "מה שם השירות?"</div>
 <div class="prompt-text">לקרוא לו עכשיו בשם אחר? SHERI-BOT? כי זה רק לסימולטור?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שם השירות ב-Render: sheri-bot. URL: https://sheri-bot.onrender.com <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">27</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביקש: "מירב צריכה ליצור GitHub Personal Access Token עם הרשאות repo, ולשלוח אותו"</div>
 <div class="prompt-text">מירב יצרה את הטוקן החדש:
 ghp_URzmnyMz7BpO...</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> חיבור GitHub ↔ Render, deploy ראשון מוצלח <span class="tag tag-deploy">deploy</span></div>
@@ -321,12 +350,14 @@ ghp_URzmnyMz7BpO...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">28</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude אמר: "עכשיו לכו ל-Render Dashboard ותגדירו env vars"</div>
 <div class="prompt-text">מה הכוונה DASHBOARD ידני?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הסבר — Render Dashboard = ממשק ניהול השרת (לא של הבוט). שם מגדירים env vars, רואים logs <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">29</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביקש: "צרו Render API Key כדי שאוכל לעשות deploy אוטומטי"</div>
 <div class="prompt-text">יש את הטוקן ל-RENDER:
 rnd_1rN8woU...</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> חיבור Render API — אפשרות deploy אוטומטי דרך API <span class="tag tag-deploy">deploy</span></div>
@@ -334,12 +365,14 @@ rnd_1rN8woU...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">30</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude אישר: "הבוט עובד על Render! הנה הקישור. עכשיו מירב יכולה לבדוק"</div>
 <div class="prompt-text">מעולה! בעצם מה עכשיו אנחנו צריכים לעשות בשביל לדייק אותו יותר? מבחינת תוכן, מבחינת שפה, מבחינת המשפך השיווקי וכדומה? מה אתה מצפה שאגיד לך בשביל לדייק יותר, והאם אני שם מידע זה כאן והיכן אתה שומר את כל המידע הזה? כמו כן היכן מירב יכולה להכנס בשביל לתת לו את ההנחיות האלה בעתיד אם תרצה במקום שנעשה זאת מכאן ורק דרכי?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> רשימת 15 שאלות משוב למירב, הסבר על admin panel שייבנה כדי שמירב תוכל לעדכן תוכן בעצמה</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">31</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציע: "מירב יכולה לעדכן ישירות ב-Supabase או שנבנה admin panel. מה עדיף?"</div>
 <div class="prompt-text">נעשה את זה דרכך כרגע.
 שלח לי רשימת 15 שאלות או יותר שאשאל את מירב כדי לכוון אותה שתענה לי אחרי שתתנסה בבוט. שיכוון אותה. כמו מה טוב ומה לא טוב. מה חסר מה צריך</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> רשימת 15 שאלות למירב — על טון, דיוק מחירים, שפה, חסרונות, edge cases, משפך מכירה</div>
@@ -355,6 +388,7 @@ rnd_1rN8woU...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">32</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> (יוזמת משתמש — כלל גלובלי שרלוונטי לכל הפרויקטים)</div>
 <div class="prompt-text">יש לי בקשה כללית שנוגעת לכל התכתבות שלי איתך — כשאני מבקש ממך לבנות אוטומציה, בדוק ותגיד לי במפורש אם אחד מהתנאים הבאים מתקיים, ואם כן — המלץ לי להשתמש ב-Make (או n8n) במקום, ותסביר בקצרה למה:
 
 1. התהליך צריך לרוץ תמידית 24/7 ולהאזין לטריגר (webhook/פולינג), ואין לי כרגע שרת/VM שרץ תמיד להריץ עליו headless mode.
@@ -368,66 +402,77 @@ rnd_1rN8woU...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">33</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude שמר את הכלל ושאל: "יש עוד כללים גלובליים שתרצה להוסיף?"</div>
 <div class="prompt-text">כן. וכמו כן לפני יישום כל לוגיקה שנוגעת לחוקי מטא (opt-in, 24-hour window, templates, webhooks, quality rating) — חובה לחפש באינטרנט ולוודא מול developers.facebook.com/docs/whatsapp שהמידע מהסקיל עדיין מדויק. אם יש סתירה — המקור הרשמי של מטא גובר תמיד על הסקיל. תעדכן אותי אם מצאת שינוי מדיניות.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> כלל גלובלי נשמר בזיכרון — אימות מדיניות Meta מ-docs רשמיים לפני יישום <span class="tag tag-rule">global rule</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">34</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude המליץ: "לשדרוג CRM כדאי להתקין את Impeccable (עיצוב) ולשדרג NotebookLM"</div>
 <div class="prompt-text">שדרג לי לפי מה שאמרת את NotebookLM ותתקין לי את Impeccable שיודע לעצב יפה CRM</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שדרוג סקיל NotebookLM, התקנת סקיל Impeccable לעיצוב UI מקצועי <span class="tag tag-skill">skill-installer</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">35</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציע לארגן את כל הפרויקטים ב-repo אחד</div>
 <div class="prompt-text">תשאיר את SHERMAN-BOT בנפרד כי זה פרויקט ללקוחה מירב שאני רוצה שגם לה תהיה את הגישה לשם לעתיד</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> החלטה — sherman-bot נשאר ב-repo נפרד של מירב (meiravsherman-rgb/sheri), לא מתמזג ל-repo הראשי</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">36</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude אישר הפרדת repos ושאל: "איפה לגבות?"</div>
 <div class="prompt-text">אז את SHERMAN-BOT גבה לריפו שלה</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> push כל הקבצים ל-GitHub של מירב <span class="tag tag-deploy">git</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">37</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude דחף ל-Git ואישר שהגיבוי הצליח</div>
 <div class="prompt-text">מה יש כרגע בריפו של SHERMAN?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> סקירת תוכן ה-repo — רשימת כל הקבצים והתפקיד של כל אחד <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">38</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציג רשימת קבצים: main.py, agent.py, database.py, tools/, static/ וכו'</div>
 <div class="prompt-text">אז אלו רק דברים שקשורים לבוט שלה?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> אישור — ה-repo מכיל רק קבצי הבוט, אין שם דברים אחרים <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">39</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude סיכם: "הבוט עובד, admin panel עובד, מירב יכולה לעדכן תוכן"</div>
 <div class="prompt-text">ברגע שמירב תעדכן את מה שצריך בשביל שהבוט יהיה מדויק יותר, כיצד נוכל להמשיך הלאה בתוכנית שלנו איתה לפי מה שסיכמנו איתה (ועוד לפני שנעלה את הבוט לאוויר באמת)</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תוכנית המשך — מירב מעדכנת תוכן ב-admin, בודקת בסימולטור, ואז נעבור ל-WhatsApp אמיתי</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">40</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הזכיר: "נחבר את Origami CRM כפי שתכננו"</div>
 <div class="prompt-text">לא אמרנו דרך אוריגמי!! אמרנו שנבנה לבד את ה-CRM</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תיקון — לא Origami CRM, בונים CRM מותאם אישית עם Supabase <span class="tag tag-fix">correction</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">41</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude תיקן ואישר: "נכון, בונים CRM מותאם אישית. השיחות כבר נשמרות"</div>
 <div class="prompt-text">נכון מאוד. האם כבר עכשיו השיחות נשמרות ב-SUPABASE במה שאנחנו עושים עם הסימולטור לבדיקה?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> אישור — כן, כל הודעה דרך הסימולטור נשמרת בטבלת conversations ב-Supabase</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">42</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude אישר שהשיחות נשמרות ושאל: "מה השלב הבא?"</div>
 <div class="prompt-text">אפשר כבר עכשיו לעבוד על הכנת הממשק אליו היא יכולה להתחבר בשביל לעדכן כל דבר — להכניס שאלות ותשובות, לעדכן את הכללים להכניס תוכן חדש וכמו כן אזור לעדכון URL, מחירים, תאריכים של דברים שהיא מעבירה וכו'. שהממשק יהיה לה נגיש נוח ופשוט להבנה מה צריכה לעשות ושהקבצי MD או JSON יעודכנו בהתאם ושהבוט יידע כל פעם לקרוא את המידע הכי עדכני מאיפה שצריך.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> בניית Admin Panel — דף HTML על Render (/admin) עם 4 טאבים: קורסים, FAQ, תוכן, כללים. שינויים נשמרים ב-Supabase <span class="tag tag-feature">admin panel</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">43</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude deploy ל-Render ואמר: "הממשק מוכן בכתובת /admin"</div>
 <div class="prompt-text">קיבלתי שגיאה NOT FOUND.
 למעשה אמרת בהתחלה שכל העדכונים האלה יופיעו ויהיה אפשר לשנות אותם ולעדכן תמיד — דרך SUPABASE. האם זה סותר? האם לזה התכוונת?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הסבר — ה-admin panel שומר ל-Supabase, לא סותר. תיקון ה-NOT FOUND (deploy חסר) <span class="tag tag-fix">fix</span></div>
@@ -435,18 +480,21 @@ rnd_1rN8woU...</div>
 
 <div class="prompt-card">
 <span class="prompt-num">44</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude תיקן ושלח קישור עובד ל-admin panel</div>
 <div class="prompt-text">קודם כל מה הסיסמא? שנית — אז ה-SUPABASE יכלול גם היסטוריית שיחות אבל הוא לא יכלול את כל מה שקשור לאפיון הבוט ולמאגר הנתונים של הבוט? ואם הוא כן, אז למה לא כבר עכשיו להתחיל לעבוד מולו? רק תענה בנתיים</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> סיסמת admin: sheri2024. החלטה — להעביר הכל ל-Supabase (תוכן + שיחות + כללים)</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">45</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הסביר: "כרגע התוכן עדיין בקבצי MD מקומיים. אפשר להעביר הכל ל-Supabase — תרצה?"</div>
 <div class="prompt-text">אחלה. אז נעבור ל-SUPABASE כבר עכשיו</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> התחלת מיגרציה — העברת כל התוכן מקבצי MD/JSON לטבלאות Supabase</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">46</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביקש: "צרו פרויקט Supabase חדש (הישן היה עם SDK שקורס ב-Render). שלחו URL, password, project ID"</div>
 <div class="prompt-text">קיבלתי את הפרטים. הנה הם:
 https://widuuwkywkwbvvaywguc.supabase.co
 meiravsherman-sheri Project
@@ -457,42 +505,49 @@ Project ID widuuwkywkwbvvaywguc</div>
 
 <div class="prompt-card">
 <span class="prompt-num">47</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציע: "אפשר להריץ את ה-admin panel מקומית לבדיקות"</div>
 <div class="prompt-text">אבל אני רוצה שמירב תכנס ותעשה את השינויים אז לא יכול להיות מקומית אצלי</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> Admin Panel על Render (לא מקומי) — מירב נכנסת מהמחשב שלה ב-URL ציבורי</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">48</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude deploy ל-Render ואמר: "admin panel חי בכתובת /admin"</div>
 <div class="prompt-text">האם שינוי שתעשה ב-ONRENDER.COM ישתקף ב-SUPABASE?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הסבר — Admin Panel ב-Render שומר ישירות ל-Supabase. שינוי → Supabase → הבוט קורא בזמן אמת <span class="tag tag-question">clarification</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">49</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הסביר את הזרימה: admin → Supabase → bot</div>
 <div class="prompt-text">האם זה התהליך שיישאר לה גם כשנעבוד עם PRODUCTION עם הבוט האמיתי?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> אישור — אותו תהליך: מירב מעדכנת ב-admin, שינויים משפיעים על הבוט בזמן אמת</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">50</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude אישר שהתהליך זהה ושלח קישור לבדיקה</div>
 <div class="prompt-text">ב-ONRENDER מקבל {"detail":"Not Found"}</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תיקון — deploy חסר או URL לא נכון, תוקן ע"י re-deploy <span class="tag tag-fix">fix</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">51</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude תיקן ואמר: "עכשיו עובד, תכנסו ל-/admin"</div>
 <div class="prompt-text">איך אכנס לחשבון של מירב? מבקש מייל וסיסמא</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> הסבר — כניסה ל-admin דרך URL + סיסמא sheri2024 (לא מייל וסיסמת Supabase)</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">52</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הסביר איך להיכנס ל-admin</div>
 <div class="prompt-text">ואז למעשה כל שינוי שעושה ב-ONRENDER יופיע ויהיה מעודכן גם ב-SUPABASE? וכל שינוי כזה ישפיע ישירות על הבוט, ועל התשובות של הבוט באופן מיידי? האם ככה? האם אתה בטוח? בצע כמה בדיקות לוודא זאת</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> בדיקת end-to-end — שינוי מחיר קורס ב-admin → בוט עונה עם המחיר החדש. אומת מלא</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">53</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude ביצע בדיקות ואישר: "שינוי מחיר ב-admin → הבוט עונה עם המחיר החדש. עובד!"</div>
 <div class="prompt-text">מצויין. עובד! תשמור לי את כל המידע בקובץ ושים לב שהכל מגובה ל-GIT של מירב</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> יצירת קובץ זיכרון project_sherman_bot.md, push כל הקבצים ל-GitHub <span class="tag tag-deploy">git</span></div>
 </div>
@@ -507,12 +562,14 @@ Project ID widuuwkywkwbvvaywguc</div>
 
 <div class="prompt-card">
 <span class="prompt-num">54</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude שמר הכל ושאל: "מה הפיצ'ר הבא שתרצה לבנות?"</div>
 <div class="prompt-text">עכשיו ארצה שנתחיל לעבוד על ה-CRM של מירב, כזה שלמעשה גם יתעד את הפניות שמגיעות מהבוט ומערוצים שונים, כזה שירכז הכל שם ושמירב תוכל להבין ממנו את מצב כל ליד וליד, איפה עומד, מה עבר, לראות היסטוריית התכתבות עם הליד, האם נרשם, מתי נרשם, למה נרשם וכל עדכון סטטוס רלוונטי שאתה מכיר ויודע בתהליך המשפך השיווקי, וכזה שאתה יכול להשתמש בסקיל המתאים ליצירת ה-CRM הזה.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> Plan Mode — תוכנית CRM מלאה: 3 טבלאות (leads, lead_events, purchases), דשבורד, רשימת לידים, מודאל פרטים <span class="tag tag-feature">CRM v1</span> <span class="tag tag-skill">crm-marketing</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">55</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude בנה את ה-CRM ועשה deploy. משתמש ניסה לשלוח הודעה דרך הסימולטור</div>
 <div class="prompt-text">התקבלה שגיאה בבוט כשהלקוח שלח הודעה 'אני רוצה לדעת פרטים'
 שגיאה: Client error '409 Conflict' for url 'https://widuuwkywkwbvvaywguc.supabase.co/rest/v1/leads'
 For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409</div>
@@ -521,6 +578,7 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 
 <div class="prompt-card">
 <span class="prompt-num">56</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude תיקן את הבאג ואישר: "CRM v1 עובד — דשבורד, לידים, רכישות"</div>
 <div class="prompt-text">לגבי ה-CRM אני צריך שתשפר אותו עוד כדי שיהיה מקצועי יותר. אני סומך עליך שתשתמש בסקיל המתאים ליצירה הזאת, שיהיו בו הרבה אפשרויות ודברים שיהיו רלוונטיים לניהול הלידים והסטטוסים. אני צריך גם אזור להגדרת שדות בצורה ידנית על ידי המשתמש כך שלא יהיה תלוי בי. אם ירצה להוסיף סטטוסים לדוגמא או כל דבר קונפיגורבילי אחר. אני רוצה להציג את הדשבורד בצורה מושכת ויפה — בשביל זה אתה גם יכול להשתמש בסקיל שישפר את החזות. אם יש צורך לשלוח מספר סוכנים במקביל — עשה זאת ותגיד לי בסוף מה עשית.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שדרוג CRM מקצועי — 3 סוכנים במקביל: (1) crm-marketing לפיצ'רים, (2) impeccable לעיצוב, (3) Explore לקוד. טבלת crm_settings, gradients, אנימציות, bulk actions, CSV export, settings tab <span class="tag tag-skill">crm-marketing</span> <span class="tag tag-skill">impeccable</span> <span class="tag tag-agent">3 agents</span> <span class="tag tag-design">design</span></div>
 </div>
@@ -535,30 +593,35 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 
 <div class="prompt-card">
 <span class="prompt-num">57</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude סיים שדרוג CRM ושאל: "יש עוד שיפורים שתרצה?"</div>
 <div class="prompt-text">אני גם רוצה שמעבר להיסטוריית השיחות — יהיה מקום לשורת סיכום של השיחה, מה יצא ממנה או למה מחכים וכדומה, כדי שלא אצטרך לעבור על השיחות כולן אלא לדעת בקצרה מה קרה.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שדה conversation_summary בטאב שיחה — מירב כותבת סיכום ידני <span class="tag tag-feature">summary</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">58</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude סיים את השדרוג וסיכם מה נעשה</div>
 <div class="prompt-text">באילו סקילים וסוכנים השתמשת?</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> סיכום כלים — crm-marketing (פיצ'רים), impeccable (עיצוב), Explore (קוד), Plan (אדריכלות)</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">59</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude פירט אילו סקילים וסוכנים השתמש</div>
 <div class="prompt-text">אני צריך שכל חלונית בדשבורד — לחיצה על המספר יוביל למקום המתאים שקשור למספר זה. כמו כן, תסכם את כל העבודה שלנו בקובץ מתאים כך שכל ה-CONTEXT שלך יישמר כל הזמן לפעמים הבאות</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> כרטיסי דשבורד לחיצים (לידים→טאב לידים, הכנסות→רכישות, המרה→סטטוס נרשמה). עדכון קובץ זיכרון מלא <span class="tag tag-feature">UX</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">60</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הוסיף שדה סיכום ידני ועדכן את הזיכרון</div>
 <div class="prompt-text">לגבי סיכום השיחה. אני רוצה גם מקום שמירב תוכל לכתוב ידנית דברים אבל גם מקום שיעודכן בצורה אוטומטית עם AI על סיכום כל שיחה ושיחה</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> סיכום AI אוטומטי — Claude Haiku מסכם כל שיחה אחרי כל הודעה. שני שדות: "סיכום AI" (כחול, אוטומטי) + "הערות שלי" (ורוד, ידני) <span class="tag tag-feature">AI summary</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">61</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציג דוגמת סיכום AI שהיתה ארוכה מדי עם פרטים מובנים מאליהם</div>
 <div class="prompt-text">סיכום מצויין. תמשיך לעדכן ככה הכל אבל תמצת יותר. אין צורך להגיד מה הבוט הציע אם זה משהו ברור מאליו לדוגמא. תתמצת כמה שיותר.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שכלול prompt סיכום AI — משפט-שניים מקסימום, רק מה חשוב: מה הלקוחה צריכה, סטטוס, צעד הבא</div>
 </div>
@@ -573,18 +636,21 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 
 <div class="prompt-card">
 <span class="prompt-num">62</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> (יוזמת משתמש — רצה ייעוץ על דרך העבודה)</div>
 <div class="prompt-text">אני רוצה שתייעץ לי מה עוד אפשר לשפר בדרך התקשרות שלי איתך בבניית הבוט. מה אני עושה לא נכון בדרך התקשורת שלנו, מבחינת שמירה על CONTEXT, התייעלות, דרך עבודה, יותר מקצועיות, עבודה יותר טובה ומקבועית. מה חסר בעבודה נכונה עם קלוד קוד</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> 7 המלצות: CLAUDE.md בפרויקט, בדיקה מקומית, תיאור ה"למה", קיבוץ בקשות, בדיקות ספציפיות, hooks, plan mode</div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">63</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude הציג 7 המלצות ושאל: "רוצה שאיישם חלק מזה עכשיו?"</div>
 <div class="prompt-text">כן, צור את קובץ הזיכרון לפרויקט זה (וגבה אותו) — שים שם את פקודות ה-DEPLOY ואת כל מה שהצעת להתייעלות. תדאג גם להעיר לי אם אתה חושב שהפרומפט שלי צריך להיות מדויק יותר ויעיל יותר. תגדיר לי את ה-HOOK כפי שהצעת.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> יצירת CLAUDE.md בפרויקט עם deploy flow, כללי ארכיטקטורה, הנחיית תקשורת. הגדרת PostToolUse hook — auto-deploy ל-Render אחרי כל git commit <span class="tag tag-skill">update-config</span> <span class="tag tag-deploy">hook</span></div>
 </div>
 
 <div class="prompt-card">
 <span class="prompt-num">64</span>
+<div class="prompt-context"><strong>שאלת Claude:</strong> Claude יצר CLAUDE.md, הגדיר hook, ושאל: "יש עוד משהו?"</div>
 <div class="prompt-text">אני רוצה שה-HOOK יפעל כשצריך. ואל תשכח לגבות הכל ל-GIT של מירב.
 אני רוצה שתייצא לי את כל ה-PROMPTS שרשמתי בפרויקט זה למסמך HTML אחד כדי שיהיו לי את כל הפרומפטים מסודרים במסמך אחד שאוכל להראות למישהו אחר מה עשיתי. מתחת לפרומפט סכם ממש בקצרה מה עשית, באם השתמשת בסקיל או אג'נט מסוים או כל HIGHLIGHT מהעבודה שעשית ממש בקצרה</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תיקון hook (בדיקת git remote URL במקום שם קובץ), push ל-Git, יצוא כל הפרומפטים למסמך HTML זה <span class="tag tag-feature">prompts log</span> <span class="tag tag-deploy">git</span></div>
