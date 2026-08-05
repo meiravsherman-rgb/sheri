@@ -155,6 +155,10 @@ def upsert_section(section_key: str, title: str, body: str) -> None:
     }).raise_for_status()
 
 
+def delete_section(section_key: str) -> None:
+    httpx.delete(_url("content_sections"), headers=_get_headers(), params={"section_key": f"eq.{section_key}"}).raise_for_status()
+
+
 # ── Rules CRUD ─────────────────────────────────────────────────────
 
 def get_all_rules() -> list[dict]:
@@ -170,6 +174,10 @@ def upsert_rule(rule_key: str, title: str, body: str, is_active: bool = True) ->
     httpx.post(_url("rules"), headers=headers, json={
         "rule_key": rule_key, "title": title, "body": body, "is_active": is_active, "updated_at": _now(),
     }).raise_for_status()
+
+
+def delete_rule(rule_key: str) -> None:
+    httpx.delete(_url("rules"), headers=_get_headers(), params={"rule_key": f"eq.{rule_key}"}).raise_for_status()
 
 
 # ── Build knowledge base from DB ──────────────────────────────────
