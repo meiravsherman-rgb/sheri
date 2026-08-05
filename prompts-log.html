@@ -14,9 +14,15 @@ header p { opacity: .85; font-size: .95rem; }
 .stats { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
 .stat { background: rgba(255,255,255,.2); padding: .4rem 1rem; border-radius: 20px; font-size: .85rem; }
 .phase { margin-bottom: 2rem; }
-.phase-header { background: #fff; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); border-right: 4px solid var(--pink); }
+.phase > summary { list-style: none; cursor: pointer; }
+.phase > summary::-webkit-details-marker { display: none; }
+.phase-header { background: #fff; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); border-right: 4px solid var(--pink); transition: all .2s; }
+.phase-header:hover { box-shadow: 0 4px 15px rgba(0,0,0,.1); }
 .phase-header h2 { color: var(--pink); font-size: 1.2rem; margin-bottom: .3rem; }
+.phase-header h2::before { content: '\25B6'; display: inline-block; margin-left: .5rem; font-size: .7rem; transition: transform .2s; }
+.phase[open] > summary .phase-header h2::before { transform: rotate(90deg); }
 .phase-header .desc { color: var(--gray); font-size: .85rem; }
+.phase-header .count { display: inline-block; background: var(--pink); color: #fff; padding: .1rem .5rem; border-radius: 10px; font-size: .7rem; font-weight: 600; margin-right: .5rem; }
 .prompt-card { background: #fff; border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: .8rem; box-shadow: 0 2px 8px rgba(0,0,0,.05); transition: all .2s; }
 .prompt-card:hover { box-shadow: 0 4px 15px rgba(0,0,0,.1); transform: translateY(-1px); }
 .prompt-num { display: inline-block; background: var(--pink); color: #fff; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-size: .8rem; font-weight: 700; margin-left: .5rem; flex-shrink: 0; }
@@ -48,11 +54,11 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 </header>
 
 <!-- ══════ שלב 1: תכנון ראשוני ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 1: תכנון ראשוני</h2>
-<div class="desc">הגדרת הפרויקט, תוכנית עבודה, מה הלקוחה צריכה להכין</div>
-</div>
+<div class="desc">הגדרת הפרויקט, תוכנית עבודה, מה הלקוחה צריכה להכין <span class="count">1 פרומפט</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">1</span>
@@ -60,14 +66,14 @@ footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
 בתור התחלה אני רוצה ליצור בוט וואטסאפ אשר לקוחות ולידים יוכלו לתקשר איתו, דרך וואטסאפ רשמי בלבד בשביל שלא ייחסם המספר שאשתמש בו, ובבוט הזה יינתן מידע על שיטת שרמן ויוביל אותם לפגישה או שיחה או הרשמה לקורס ללמוד זאת או לקורס המדריכות. אצרף בהמשך גם קובץ על הלוגיקה עם כל המידע הדרוש אך בתור התחלה אני רוצה לעבוד עם בעלת העסק וליצור לה את הבוט AI הזה בצורה כזאת שכל מה שצריך יישב אצלה ורק הקידוד דרך CLAUDE CODE ייעשה מכאן אך לא יהיה תלוי בשום דבר מכאן כך שהכל צריך לשבת בענן כאשר הלקוחה מירב היא זאת שתפתח את החשבונות איפה שצריך ותשלם את התשלומים החודשיים. לצורך התחלת העבודה, אני צריך להכין אותה למה בדיוק היא צריכה לעשות לפני מבחינת פתיחת חשבונות, מה העלויות שיהיו לה, וכל דבר שצריך בשביל שהבוט יתפקד מול API רשמי של וואטסאפ ויענה ללקוחות ולידים ויתן להם מידע ויוביל אותם למכירה. לשם כך אתה גם תצטרך להשתמש בסקילים שהטענתי לך שרלוונטים לכך ולצורך התכנון תעזר בהם. אך גם צירפתי כאן קובץ שמסכם דברים שלמדתי בקורס שהוא הבסיס ליצירת בוט וואסאפ אז תיעזר בו. לא הכל רלוונטי כי הוא מדבר על GREEN API ואני רוצה רשמי והוא מדבר על עוזר אישי ואני רוצה שירות ללקוחות שפונים ממספרים שונים ולא מוכרים. צור לי את תוכנית העבודה. שלב שלב. קודם מה אני צריך להכין מראש, מה הלקוחה צריכה להכין מראש, אילו חשבונות וכלים נשתמש וצריך לפתוח להם חשבון, מה העלויות, וכל דבר שנדרש מראש, ואז פרט גם את השלבים הבאים עד ליצירת בוט עובד מול הלקוחה מירב. תכנן ותגיד לי אם אתה צריך משהו ממני</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תוכנית עבודה מלאה — WhatsApp Bot עם Meta Cloud API, FastAPI, Supabase, Render. רשימת חשבונות לפתוח, עלויות, שלבים מ-0 עד בוט עובד <span class="tag tag-skill">wa-characterize</span></div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 2: הכנה לפגישה + איפיון ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 2: הכנה לפגישה עם מירב + איפיון הבוט</h2>
-<div class="desc">תכנון הפגישה, איפיון זהות הבוט, מאגר ידע, כלים, כללי התנהגות</div>
-</div>
+<div class="desc">תכנון הפגישה, איפיון זהות הבוט, מאגר ידע, כלים, כללי התנהגות <span class="count">10 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">2</span>
@@ -194,14 +200,14 @@ https://secure.cardcom.solutions/EA/EA5/lqRXZwN...
 https://secure.cardcom.solutions/EA/EA5/zBeZWXV...</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> 8 קורסים עם מחירים וקישורי רכישה ב-Cardcom</div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 3: פתיחת חשבונות + בנייה ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 3: פתיחת חשבונות, Meta, בנייה ראשונית</h2>
-<div class="desc">GitHub, Supabase, Anthropic, Meta WhatsApp, סקילים, התקנות</div>
-</div>
+<div class="desc">GitHub, Supabase, Anthropic, Meta WhatsApp, סקילים, התקנות <span class="count">11 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">12</span>
@@ -273,14 +279,14 @@ https://github.com/peleg-jpg/grill-me-skill</div>
 <div class="prompt-text">מירב הוסיפה קרדיטים אז אתה יכול להמשיך</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> המשך עבודה — מירב הוסיפה קרדיטים לחשבון Anthropic, בניית הקוד ממשיכה <span class="tag tag-skill">wa-build</span></div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 4: סימולטור + Deploy ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 4: סימולטור, Render, Deploy</h2>
-<div class="desc">בדיקות, סימולטור צ'אט, העלאה ל-Render, GitHub Token</div>
-</div>
+<div class="desc">בדיקות, סימולטור צ'אט, העלאה ל-Render, GitHub Token <span class="count">9 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">23</span>
@@ -338,14 +344,14 @@ rnd_1rN8woU...</div>
 שלח לי רשימת 15 שאלות או יותר שאשאל את מירב כדי לכוון אותה שתענה לי אחרי שתתנסה בבוט. שיכוון אותה. כמו מה טוב ומה לא טוב. מה חסר מה צריך</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> רשימת 15 שאלות למירב — על טון, דיוק מחירים, שפה, חסרונות, edge cases, משפך מכירה</div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 5: כללים + Git + Supabase חדש ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 5: כללים גלובליים, ניהול Git, מעבר ל-Supabase חדש</h2>
-<div class="desc">כללי Make/Meta, ארגון repos, Supabase חדש, admin panel</div>
-</div>
+<div class="desc">כללי Make/Meta, ארגון repos, Supabase חדש, admin panel <span class="count">22 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">32</span>
@@ -490,14 +496,14 @@ Project ID widuuwkywkwbvvaywguc</div>
 <div class="prompt-text">מצויין. עובד! תשמור לי את כל המידע בקובץ ושים לב שהכל מגובה ל-GIT של מירב</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> יצירת קובץ זיכרון project_sherman_bot.md, push כל הקבצים ל-GitHub <span class="tag tag-deploy">git</span></div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 6: CRM ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 6: בניית CRM</h2>
-<div class="desc">תכנון, בנייה, תיקון באגים, שדרוג מקצועי</div>
-</div>
+<div class="desc">תכנון, בנייה, תיקון באגים, שדרוג מקצועי <span class="count">3 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">54</span>
@@ -518,14 +524,14 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 <div class="prompt-text">לגבי ה-CRM אני צריך שתשפר אותו עוד כדי שיהיה מקצועי יותר. אני סומך עליך שתשתמש בסקיל המתאים ליצירה הזאת, שיהיו בו הרבה אפשרויות ודברים שיהיו רלוונטיים לניהול הלידים והסטטוסים. אני צריך גם אזור להגדרת שדות בצורה ידנית על ידי המשתמש כך שלא יהיה תלוי בי. אם ירצה להוסיף סטטוסים לדוגמא או כל דבר קונפיגורבילי אחר. אני רוצה להציג את הדשבורד בצורה מושכת ויפה — בשביל זה אתה גם יכול להשתמש בסקיל שישפר את החזות. אם יש צורך לשלוח מספר סוכנים במקביל — עשה זאת ותגיד לי בסוף מה עשית.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שדרוג CRM מקצועי — 3 סוכנים במקביל: (1) crm-marketing לפיצ'רים, (2) impeccable לעיצוב, (3) Explore לקוד. טבלת crm_settings, gradients, אנימציות, bulk actions, CSV export, settings tab <span class="tag tag-skill">crm-marketing</span> <span class="tag tag-skill">impeccable</span> <span class="tag tag-agent">3 agents</span> <span class="tag tag-design">design</span></div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 7: פיצ'רים נוספים ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 7: פיצ'רים נוספים</h2>
-<div class="desc">סיכום שיחה ידני + AI אוטומטי, דשבורד לחיץ, שאילתות</div>
-</div>
+<div class="desc">סיכום שיחה ידני + AI אוטומטי, דשבורד לחיץ, שאילתות <span class="count">5 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">57</span>
@@ -556,14 +562,14 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 <div class="prompt-text">סיכום מצויין. תמשיך לעדכן ככה הכל אבל תמצת יותר. אין צורך להגיד מה הבוט הציע אם זה משהו ברור מאליו לדוגמא. תתמצת כמה שיותר.</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> שכלול prompt סיכום AI — משפט-שניים מקסימום, רק מה חשוב: מה הלקוחה צריכה, סטטוס, צעד הבא</div>
 </div>
-</div>
+</details>
 
 <!-- ══════ שלב 8: שיפור תהליך עבודה ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase">
+<summary><div class="phase-header">
 <h2>שלב 8: שיפור תהליך עבודה + ייצוא</h2>
-<div class="desc">ייעוץ workflow, CLAUDE.md, hooks אוטומטיים, ייצוא פרומפטים</div>
-</div>
+<div class="desc">ייעוץ workflow, CLAUDE.md, hooks אוטומטיים, ייצוא פרומפטים <span class="count">3 פרומפטים</span></div>
+</div></summary>
 
 <div class="prompt-card">
 <span class="prompt-num">62</span>
@@ -583,14 +589,14 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 אני רוצה שתייצא לי את כל ה-PROMPTS שרשמתי בפרויקט זה למסמך HTML אחד כדי שיהיו לי את כל הפרומפטים מסודרים במסמך אחד שאוכל להראות למישהו אחר מה עשיתי. מתחת לפרומפט סכם ממש בקצרה מה עשית, באם השתמשת בסקיל או אג'נט מסוים או כל HIGHLIGHT מהעבודה שעשית ממש בקצרה</div>
 <div class="prompt-summary"><strong>תוצאה:</strong> תיקון hook (בדיקת git remote URL במקום שם קובץ), push ל-Git, יצוא כל הפרומפטים למסמך HTML זה <span class="tag tag-feature">prompts log</span> <span class="tag tag-deploy">git</span></div>
 </div>
-</div>
+</details>
 
 <!-- ══════ סטטיסטיקות ══════ -->
-<div class="phase">
-<div class="phase-header">
+<details class="phase" open>
+<summary><div class="phase-header">
 <h2>סיכום טכני</h2>
 <div class="desc">מה נבנה בפועל</div>
-</div>
+</div></summary>
 <div class="prompt-card" style="font-size:.88rem;line-height:1.8">
 <strong>קבצים שנוצרו/שונו:</strong> main.py, agent.py, prompt.py, database.py, config.py, admin.py, crm.py, seed_db.py, spec.json, knowledge-base.md, CLAUDE.md, tools/*<br>
 <strong>טבלאות Supabase:</strong> 10 (conversations, seen_messages, faq, courses, content_sections, rules, leads, lead_events, purchases, crm_settings)<br>
@@ -602,7 +608,7 @@ For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/St
 <strong>URL:</strong> https://sheri-bot.onrender.com (/simulator, /admin, /crm)<br>
 <strong>Hook:</strong> auto-deploy ל-Render אחרי כל git commit בפרויקט
 </div>
-</div>
+</details>
 
 <footer>
 נוצר באמצעות Claude Code (Opus 4.6) &bull; פרויקט שרי הבוטית &bull; אוגוסט 2026
