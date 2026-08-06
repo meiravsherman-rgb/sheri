@@ -8,9 +8,11 @@ from pydantic import BaseModel
 from database import (
     get_all_faq, upsert_faq, delete_faq,
     get_all_courses, upsert_course, delete_course,
-    get_all_sections, upsert_section, delete_section,
+    get_all_sections, get_section, upsert_section, delete_section,
     get_all_rules, upsert_rule, delete_rule,
+    _GUIDE_QUESTIONS,
 )
+from prompt import invalidate_cache
 
 router = APIRouter(prefix="/admin")
 
@@ -55,12 +57,14 @@ async def api_get_faq():
 @router.post("/api/faq", dependencies=[Depends(check_auth)])
 async def api_upsert_faq(req: FaqRequest):
     faq_id = upsert_faq(req.id, req.question, req.answer, req.sort_order)
+    invalidate_cache()
     return {"id": faq_id}
 
 
 @router.delete("/api/faq/{faq_id}", dependencies=[Depends(check_auth)])
 async def api_delete_faq(faq_id: int):
     delete_faq(faq_id)
+    invalidate_cache()
     return {"ok": True}
 
 
@@ -87,12 +91,14 @@ async def api_get_courses():
 async def api_upsert_course(req: CourseRequest):
     fields = req.model_dump(exclude={"id"})
     course_id = upsert_course(req.id, **fields)
+    invalidate_cache()
     return {"id": course_id}
 
 
 @router.delete("/api/courses/{course_id}", dependencies=[Depends(check_auth)])
 async def api_delete_course(course_id: int):
     delete_course(course_id)
+    invalidate_cache()
     return {"ok": True}
 
 
@@ -112,12 +118,14 @@ async def api_get_sections():
 @router.post("/api/sections", dependencies=[Depends(check_auth)])
 async def api_upsert_section(req: SectionRequest):
     upsert_section(req.section_key, req.title, req.body)
+    invalidate_cache()
     return {"ok": True}
 
 
 @router.delete("/api/sections/{section_key}", dependencies=[Depends(check_auth)])
 async def api_delete_section(section_key: str):
     delete_section(section_key)
+    invalidate_cache()
     return {"ok": True}
 
 
@@ -138,12 +146,14 @@ async def api_get_rules():
 @router.post("/api/rules", dependencies=[Depends(check_auth)])
 async def api_upsert_rule(req: RuleRequest):
     upsert_rule(req.rule_key, req.title, req.body, req.is_active)
+    invalidate_cache()
     return {"ok": True}
 
 
 @router.delete("/api/rules/{rule_key}", dependencies=[Depends(check_auth)])
 async def api_delete_rule(rule_key: str):
     delete_rule(rule_key)
+    invalidate_cache()
     return {"ok": True}
 
 
@@ -185,7 +195,54 @@ async def api_upload_document(file: UploadFile = File(...)):
     section_key = f"doc_{int(__import__('time').time())}"
     title = file.filename.rsplit(".", 1)[0]  # filename without extension
     upsert_section(section_key, title, text)
+    invalidate_cache()
     return {"ok": True, "section_key": section_key, "title": title, "chars": len(text)}
+
+
+# ── Questionnaire API ─────────────────────────────────────────────
+
+@router.get("/api/questionnaire", dependencies=[Depends(check_auth)])
+async def api_get_questionnaire():
+    """Return the 18 guide questions with their current answers."""
+    results = []
+    for key, question, group, storage, order in _GUIDE_QUESTIONS:
+        answer = ""
+        if storage == "rule":
+            rules = [r for r in get_all_rules() if r.get("rule_key") == key]
+            if rules:
+                answer = rules[0].get("body", "")
+        else:
+            sec = get_section(key)
+            if sec:
+                answer = sec.get("body", "")
+        results.append({
+            "question_key": key,
+            "question_text": question,
+            "group_name": group,
+            "answer": answer,
+            "sort_order": order,
+        })
+    return results
+
+
+class QuestionnaireRequest(BaseModel):
+    question_key: str
+    answer: str
+
+
+@router.post("/api/questionnaire", dependencies=[Depends(check_auth)])
+async def api_save_questionnaire(req: QuestionnaireRequest):
+    """Save a single questionnaire answer."""
+    match = [q for q in _GUIDE_QUESTIONS if q[0] == req.question_key]
+    if not match:
+        raise HTTPException(status_code=404, detail="Unknown question key")
+    key, title, group, storage, order = match[0]
+    if storage == "rule":
+        upsert_rule(key, title, req.answer, is_active=True)
+    else:
+        upsert_section(key, title, req.answer)
+    invalidate_cache()
+    return {"ok": True}
 
 
 # ── Admin HTML page ───────────────────────────────────────────────
@@ -342,6 +399,7 @@ textarea { min-height: 80px; resize: vertical; }
 <div class="sub-tabs" id="tabs-behavior" style="display:none;">
     <div class="sub-tab active" onclick="switchSubTab('behavior','rules')">כללי התנהגות</div>
     <div class="sub-tab" onclick="switchSubTab('behavior','feedback')">משוב והערות</div>
+    <div class="sub-tab" onclick="switchSubTab('behavior','guide')">שאלון דיוק הבוט</div>
 </div>
 
 <main>
@@ -434,6 +492,16 @@ textarea { min-height: 80px; resize: vertical; }
     <div id="feedbackList"></div>
 </div>
 
+<!-- ── Questionnaire (Guide) ── -->
+<div class="section" id="sec-guide">
+    <div class="section-header">
+        <h2>שאלון דיוק הבוט</h2>
+        <button class="btn btn-primary" onclick="saveAllGuide()">שמור הכל</button>
+    </div>
+    <p class="section-desc">18 שאלות שעוזרות לדייק את ההתנהגות של שרי. ענו על כמה שתרצו — כל תשובה תשפר את הבוט. אין חובה לענות על הכל בבת אחת. נסו קודם כמה שיחות בסימולטור ואז חזרו לענות.</p>
+    <div id="guideList"></div>
+</div>
+
 </div><!-- /area-behavior -->
 
 </main>
@@ -503,7 +571,7 @@ function showStatus(msg, type='success') {
 }
 
 // ── Load all ──
-function loadAll() { loadCourses(); loadFaq(); loadContent(); loadRules(); loadFeedback(); }
+function loadAll() { loadCourses(); loadFaq(); loadContent(); loadRules(); loadFeedback(); loadGuide(); }
 
 // ── Courses ──
 async function loadCourses() {
@@ -625,7 +693,7 @@ function renderSections() {
     const notesEl = document.getElementById('notesList');
     const docsEl = document.getElementById('docsList');
     // Separate: regular content, notes (note_*), uploaded docs (doc_*)
-    const regular = sectionsData.filter(s => !s.section_key.startsWith('note_') && !s.section_key.startsWith('doc_'));
+    const regular = sectionsData.filter(s => !s.section_key.startsWith('note_') && !s.section_key.startsWith('doc_') && !s.section_key.startsWith('guide_'));
     const notes = sectionsData.filter(s => s.section_key.startsWith('note_'));
     const docs = sectionsData.filter(s => s.section_key.startsWith('doc_'));
 
@@ -701,7 +769,7 @@ async function loadRules() {
     const data = await res.json();
     const el = document.getElementById('rulesList');
     // Filter out feedback rules
-    const realRules = data.filter(r => !r.rule_key.startsWith('feedback_'));
+    const realRules = data.filter(r => !r.rule_key.startsWith('feedback_') && !r.rule_key.startsWith('guide_'));
     if (!realRules.length) {
         el.innerHTML = '<div class="empty"><p>אין כללים עדיין</p><button class="btn btn-add" onclick="addRule()">+ הוסיפי כלל ראשון</button></div>';
         return;
@@ -833,6 +901,61 @@ async function uploadFile(file) {
     } catch(e) {
         statusEl.innerHTML = '<p style="color:#c62828;">שגיאה: ' + esc(e.message) + '</p>';
     }
+}
+
+// ── Questionnaire (Guide) ──
+let guideData = [];
+
+async function loadGuide() {
+    const res = await fetch(API + '/questionnaire');
+    guideData = await res.json();
+    renderGuide();
+}
+
+function renderGuide() {
+    const el = document.getElementById('guideList');
+    if (!guideData.length) {
+        el.innerHTML = '<div class="empty"><p>השאלון טרם הוגדר</p></div>';
+        return;
+    }
+    const groupOrder = ['טון ושפה', 'תוכן וידע', 'משפך שיווקי', 'העברה לנציג', 'כללי'];
+    const groups = {};
+    guideData.forEach(q => {
+        if (!groups[q.group_name]) groups[q.group_name] = [];
+        groups[q.group_name].push(q);
+    });
+    let html = '';
+    groupOrder.forEach(g => {
+        if (!groups[g]) return;
+        html += '<h3 style="margin:24px 0 12px;color:#d4838f;font-size:16px;">' + esc(g) + '</h3>';
+        groups[g].forEach(q => {
+            const has = q.answer && q.answer.trim();
+            html += '<div class="card" style="border-right:4px solid ' + (has ? '#4caf50' : '#e8ddd5') + ';">'
+                + '<label style="font-size:14px;font-weight:600;color:#444;">' + esc(q.question_text) + '</label>'
+                + '<textarea id="gq-' + q.question_key + '" rows="3" placeholder="ענו כאן..." style="margin-top:8px;">' + esc(q.answer || '') + '</textarea>'
+                + '</div>';
+        });
+    });
+    el.innerHTML = html;
+}
+
+async function saveAllGuide() {
+    let saved = 0;
+    for (const q of guideData) {
+        const ta = document.getElementById('gq-' + q.question_key);
+        if (!ta) continue;
+        const newVal = ta.value;
+        if (newVal !== (q.answer || '')) {
+            await fetch(API + '/questionnaire', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question_key: q.question_key, answer: newVal})
+            });
+            saved++;
+        }
+    }
+    showStatus(saved > 0 ? 'נשמרו ' + saved + ' תשובות והבוט עודכן' : 'אין שינויים לשמור');
+    loadGuide();
 }
 
 // ── Helpers ──

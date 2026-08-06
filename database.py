@@ -418,3 +418,42 @@ def update_crm_setting(setting_key: str, setting_value) -> None:
         params={"setting_key": f"eq.{setting_key}"},
         json={"setting_value": json.dumps(setting_value) if isinstance(setting_value, (list, dict)) else setting_value, "updated_at": _now()},
     ).raise_for_status()
+
+
+# ── Questionnaire Seed ────────────────────────────────────────────
+
+_GUIDE_QUESTIONS = [
+    # (key, title/question, group, storage_type, sort_order)
+    # storage_type: "rule" → rules table, "section" → content_sections table
+    ("guide_tone", "האם הטון של שרי מתאים? יותר מדי רשמי? יותר מדי חברי? תני דוגמה לתשובה שלא בדיוק בטון שלך.", "טון ושפה", "rule", 1),
+    ("guide_response_length", "האם אורך התשובות נכון? ארוכות מדי? קצרות מדי? מה האורך האידיאלי?", "טון ושפה", "rule", 2),
+    ("guide_expressions_use", "יש ביטויים או מילים שאת משתמשת בהם הרבה עם לקוחות ושהבוט צריך להשתמש?", "טון ושפה", "rule", 3),
+    ("guide_expressions_avoid", "יש ביטויים שהבוט לא צריך להשתמש בהם? שאת לא הייתה אומרת ככה?", "טון ושפה", "rule", 4),
+    ("guide_corrections", "האם יש מידע שהבוט אמר שהוא לא מדויק? מה צריך לתקן?", "תוכן וידע", "section", 5),
+    ("guide_top_questions", "מהן 5 השאלות שלקוחות שואלות הכי הרבה? כתבי את השאלה ואת התשובה המדויקת.", "תוכן וידע", "section", 6),
+    ("guide_missing_topics", "יש נושאים שהבוט לא יודע עליהם ושלקוחות שואלות? (למשל: הכשרת מדריכות, ליווי אישי)", "תוכן וידע", "section", 7),
+    ("guide_objections", "מהן 3 ההתנגדויות הנפוצות? ואיך את עונה עליהן? (למשל: 'יקר לי', 'אין לי זמן')", "תוכן וידע", "section", 8),
+    ("guide_funnel_goal", "מה המטרה העיקרית של הבוט? שלקוחה תירשם לקורס? תשאיר פרטים? תתקשר? תיכנס לשיעור חינמי?", "משפך שיווקי", "rule", 9),
+    ("guide_special_offer", "האם יש הצעה מיוחדת ללקוחות חדשות? (שיעור טעימה, מדריך חינמי, הנחה?)", "משפך שיווקי", "section", 10),
+    ("guide_offer_timing", "באיזה שלב בשיחה הבוט צריך להציע קורס? מיד? רק אחרי ששאלה? אחרי שהבין את הבעיה?", "משפך שיווקי", "rule", 11),
+    ("guide_course_selection", "כשלקוחה מתלבטת בין קורסים — מה הקריטריון שעוזר להחליט? (גיל, בעיה, שלב בחיים?)", "משפך שיווקי", "section", 12),
+    ("guide_handoff_conditions", "באילו מצבים את רוצה שהבוט יעביר אלייך במקום לענות? (ליווי אישי, תלונה, שאלה רפואית?)", "העברה לנציג", "rule", 13),
+    ("guide_handoff_message", "מה הבוט צריך לומר ללקוחה כשהוא מעביר אלייך? ומה לא לומר?", "העברה לנציג", "rule", 14),
+    ("guide_positive_feedback", "מה הדבר הכי טוב שראית בתשובות הבוט? מה הפתיע אותך לטובה?", "כללי", "rule", 15),
+    ("guide_urgent_fix", "מה הדבר הכי בעייתי שראית? מה הכי דחוף לתקן?", "כללי", "rule", 16),
+    ("guide_success_stories", "יש סיפורי הצלחה קצרים של לקוחות שהבוט יכול לשתף? (בלי שמות)", "כללי", "section", 17),
+    ("guide_seasonal", "יש תקופות בשנה שבהן יש מבצעים, קורסים חדשים, או שינויים שהבוט צריך לדעת?", "כללי", "section", 18),
+]
+
+
+def seed_questionnaire() -> None:
+    """Seed the 18 guide questions into existing tables (idempotent)."""
+    all_rules = get_all_rules()
+    all_sections = get_all_sections()
+    rule_keys = {r["rule_key"] for r in all_rules}
+    section_keys = {s["section_key"] for s in all_sections}
+    for key, title, group, storage, order in _GUIDE_QUESTIONS:
+        if storage == "rule" and key not in rule_keys:
+            upsert_rule(key, title, "", is_active=True)
+        elif storage == "section" and key not in section_keys:
+            upsert_section(key, title, "")

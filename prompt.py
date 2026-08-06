@@ -3,6 +3,15 @@
 from config import SPEC, KNOWLEDGE_BASE
 from database import build_knowledge_base, build_rules_text, get_all_sections
 
+# ── In-memory prompt cache ────────────────────────────────────────
+_prompt_cache: str | None = None
+
+
+def invalidate_cache():
+    """Call after any admin save to force prompt rebuild on next message."""
+    global _prompt_cache
+    _prompt_cache = None
+
 
 def _dynamic_knowledge() -> str:
     """Build knowledge base from DB. Falls back to static file if DB is empty."""
@@ -42,6 +51,14 @@ def _tools_section(tool_registry: dict) -> str:
 
 
 def build_system_prompt(tool_registry: dict) -> str:
+    global _prompt_cache
+    if _prompt_cache is not None:
+        return _prompt_cache
+    _prompt_cache = _build_fresh(tool_registry)
+    return _prompt_cache
+
+
+def _build_fresh(tool_registry: dict) -> str:
     identity = SPEC["identity"]
     scope = SPEC["scope"]
     handoff = SPEC.get("handoff", {})

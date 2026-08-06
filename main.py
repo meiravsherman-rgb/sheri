@@ -14,7 +14,7 @@ from config import (
     WHATSAPP_PHONE_NUMBER_ID,
     WHATSAPP_VERIFY_TOKEN,
 )
-from database import init_db, is_seen, mark_seen, upsert_lead_from_message
+from database import init_db, is_seen, mark_seen, upsert_lead_from_message, seed_questionnaire
 from admin import router as admin_router
 from crm import router as crm_router
 from seed_db import seed
@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
     try:
         init_db()
         seed()  # Populate admin tables if empty
+        seed_questionnaire()  # Insert 18 guide questions if not exist
     except Exception as e:
         logger.warning(f"Seed/init warning: {e}")
     # Import tools to populate TOOL_REGISTRY
