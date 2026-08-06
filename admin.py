@@ -612,8 +612,10 @@ async function loadFaq() {
 
 async function saveFaq(id) {
     const data = { id, question: val('fq-'+id), answer: val('fa-'+id) };
-    await fetch(API + '/faq', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const res = await fetch(API + '/faq', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
     showStatus('השאלה נשמרה');
+    loadFaq();
 }
 
 async function deleteFaqItem(id) {
@@ -685,8 +687,10 @@ function sectionCard(s) {
 
 async function saveSection(key) {
     const data = { section_key: key, title: val('st-'+key), body: val('sb-'+key) };
-    await fetch(API + '/sections', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const res = await fetch(API + '/sections', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
     showStatus('התוכן נשמר');
+    loadContent();
 }
 
 async function deleteSection(key) {
@@ -747,8 +751,10 @@ async function saveRule(key) {
         rule_key: key, title: val('rt-'+key), body: val('rb-'+key),
         is_active: document.getElementById('ra-'+key).checked ? 1 : 0
     };
-    await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const res = await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
     showStatus('הכלל נשמר');
+    loadRules();
 }
 
 async function deleteRule(key) {
@@ -787,7 +793,8 @@ async function saveFeedbackRule(key) {
     };
     const body = val('rb-' + key);
     const data = { rule_key: key, title: titles[key] || key, body: body, is_active: body.trim() ? 1 : 0 };
-    await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    const res = await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
     showStatus('המשוב נשמר');
 }
 

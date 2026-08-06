@@ -150,9 +150,11 @@ def get_section(section_key: str) -> dict | None:
 
 def upsert_section(section_key: str, title: str, body: str) -> None:
     headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
-    httpx.post(_url("content_sections"), headers=headers, json={
-        "section_key": section_key, "title": title, "body": body, "updated_at": _now(),
-    }).raise_for_status()
+    httpx.post(
+        _url("content_sections") + "?on_conflict=section_key",
+        headers=headers,
+        json={"section_key": section_key, "title": title, "body": body, "updated_at": _now()},
+    ).raise_for_status()
 
 
 def delete_section(section_key: str) -> None:
@@ -171,9 +173,11 @@ def get_all_rules() -> list[dict]:
 
 def upsert_rule(rule_key: str, title: str, body: str, is_active: bool = True) -> None:
     headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
-    httpx.post(_url("rules"), headers=headers, json={
-        "rule_key": rule_key, "title": title, "body": body, "is_active": is_active, "updated_at": _now(),
-    }).raise_for_status()
+    httpx.post(
+        _url("rules") + "?on_conflict=rule_key",
+        headers=headers,
+        json={"rule_key": rule_key, "title": title, "body": body, "is_active": is_active, "updated_at": _now()},
+    ).raise_for_status()
 
 
 def delete_rule(rule_key: str) -> None:
