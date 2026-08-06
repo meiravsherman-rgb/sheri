@@ -428,29 +428,10 @@ textarea { min-height: 80px; resize: vertical; }
 <div class="section" id="sec-feedback">
     <div class="section-header">
         <h2>משוב והערות</h2>
+        <button class="btn btn-add" onclick="addFeedback()">+ הערה חדשה</button>
     </div>
-    <p class="section-desc">כתבי כאן דברים שאהבת בהתנהגות הבוט ודברים שלא אהבת. הוסיפי הנחיות ספציפיות כמו: "להיות יותר אישית", "לא לכתוב הודעות ארוכות" וכו'. כל מה שתכתבי כאן ישפיע על אופן התגובה של הבוט.</p>
-    <div class="card">
-        <div class="card-header">
-            <h3>דברים שאהבתי</h3>
-            <button class="btn btn-save" onclick="saveFeedbackRule('feedback_liked')">שמור</button>
-        </div>
-        <textarea id="rb-feedback_liked" rows="5" placeholder="למשל: אהבתי שהבוט עונה בצורה חמה ואישית..."></textarea>
-    </div>
-    <div class="card">
-        <div class="card-header">
-            <h3>דברים שצריך לשנות</h3>
-            <button class="btn btn-save" onclick="saveFeedbackRule('feedback_disliked')">שמור</button>
-        </div>
-        <textarea id="rb-feedback_disliked" rows="5" placeholder="למשל: הבוט כותב הודעות ארוכות מדי, צריך לקצר..."></textarea>
-    </div>
-    <div class="card">
-        <div class="card-header">
-            <h3>הנחיות נוספות</h3>
-            <button class="btn btn-save" onclick="saveFeedbackRule('feedback_instructions')">שמור</button>
-        </div>
-        <textarea id="rb-feedback_instructions" rows="5" placeholder="כל הנחיה אחרת שתרצי לתת לבוט..."></textarea>
-    </div>
+    <p class="section-desc">כתבי כאן דברים שאהבת בהתנהגות הבוט, דברים שלא אהבת, או הנחיות ספציפיות כמו: "להיות יותר אישית", "לא לכתוב הודעות ארוכות" וכו'. כל מה שתכתבי כאן ישפיע על אופן התגובה של הבוט.</p>
+    <div id="feedbackList"></div>
 </div>
 
 </div><!-- /area-behavior -->
@@ -775,27 +756,51 @@ function addRule() {
 async function loadFeedback() {
     const res = await fetch(API + '/rules');
     const data = await res.json();
-    const feedbackKeys = ['feedback_liked', 'feedback_disliked', 'feedback_instructions'];
-    for (const key of feedbackKeys) {
-        const rule = data.find(r => r.rule_key === key);
-        const el = document.getElementById('rb-' + key);
-        if (el && rule) {
-            el.value = rule.body || '';
-        }
+    const feedbackItems = data.filter(r => r.rule_key.startsWith('feedback_'));
+    const el = document.getElementById('feedbackList');
+    if (!feedbackItems.length) {
+        el.innerHTML = '<div class="empty"><p>אין משוב עדיין</p><button class="btn btn-add" onclick="addFeedback()">+ הוסיפי הערה ראשונה</button></div>';
+        return;
     }
+    el.innerHTML = feedbackItems.map(r => `
+        <div class="card">
+            <div class="card-header">
+                <h3>${esc(r.title) || '(ללא כותרת)'}</h3>
+                <div>
+                    <button class="btn btn-save" onclick="saveFeedback('${r.rule_key}')">שמור</button>
+                    <button class="btn btn-danger" onclick="deleteFeedback('${r.rule_key}')">מחק</button>
+                </div>
+            </div>
+            <label>כותרת (למשל: "דברים שאהבתי", "דברים לשנות", "הנחיה")</label>
+            <input type="text" id="ft-${r.rule_key}" value="${esc(r.title)}">
+            <label>תוכן</label>
+            <textarea id="fb-${r.rule_key}" rows="4">${esc(r.body)}</textarea>
+        </div>
+    `).join('');
 }
 
-async function saveFeedbackRule(key) {
-    const titles = {
-        feedback_liked: 'דברים שמירב אוהבת',
-        feedback_disliked: 'דברים שמירב רוצה לשנות',
-        feedback_instructions: 'הנחיות נוספות ממירב'
+function addFeedback() {
+    const key = 'feedback_' + Date.now();
+    const data = { rule_key: key, title: '', body: '', is_active: 1 };
+    fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
+        .then(() => { showStatus('הערת משוב חדשה נוצרה'); loadFeedback(); });
+}
+
+async function saveFeedback(key) {
+    const data = {
+        rule_key: key, title: val('ft-'+key), body: val('fb-'+key), is_active: 1
     };
-    const body = val('rb-' + key);
-    const data = { rule_key: key, title: titles[key] || key, body: body, is_active: body.trim() ? 1 : 0 };
     const res = await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
     if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
     showStatus('המשוב נשמר');
+    loadFeedback();
+}
+
+async function deleteFeedback(key) {
+    if (!confirm('למחוק את ההערה?')) return;
+    await fetch(API + '/rules/' + key, {method:'DELETE'});
+    showStatus('ההערה נמחקה');
+    loadFeedback();
 }
 
 // ── Document Upload ──
