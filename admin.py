@@ -538,6 +538,16 @@ fetch(API + '/faq').then(r => {
         document.getElementById('loginOverlay').style.display = 'none';
         loadAll();
     }
+}).catch(() => {
+    // Server might be waking up (Render free tier), retry after 3 seconds
+    setTimeout(() => {
+        fetch(API + '/faq').then(r => {
+            if (r.ok) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                loadAll();
+            }
+        }).catch(() => {});
+    }, 3000);
 });
 
 // ── Area switching ──
@@ -575,9 +585,11 @@ function loadAll() { loadCourses(); loadFaq(); loadContent(); loadRules(); loadF
 
 // ── Courses ──
 async function loadCourses() {
-    const res = await fetch(API + '/courses');
-    const coursesData = await res.json();
     const el = document.getElementById('coursesList');
+    try {
+    const res = await fetch(API + '/courses');
+    if (!res.ok) { el.innerHTML = '<div class="empty"><p>שגיאה בטעינת קורסים</p><button class="btn btn-add" onclick="loadCourses()">נסי שוב</button></div>'; return; }
+    const coursesData = await res.json();
     if (!coursesData.length) {
         el.innerHTML = '<div class="empty"><p>אין קורסים עדיין</p></div>';
         return;
@@ -607,6 +619,7 @@ async function loadCourses() {
             </div>
         </div>
     `).join('');
+    } catch(e) { console.error('loadCourses error:', e); el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadCourses()">נסי שוב</button></div>'; }
 }
 
 async function saveCourse(id) {
@@ -635,28 +648,34 @@ function addCourse() {
 
 // ── FAQ ──
 async function loadFaq() {
-    const res = await fetch(API + '/faq');
-    const faqData = await res.json();
     const el = document.getElementById('faqList');
-    if (!faqData.length) {
-        el.innerHTML = '<div class="empty"><p>אין שאלות ותשובות עדיין</p><button class="btn btn-add" onclick="addFaq()">+ הוסיפי שאלה ראשונה</button></div>';
-        return;
-    }
-    el.innerHTML = faqData.map(f => `
-        <div class="card">
-            <div class="card-header">
-                <h3>שאלה #${f.id}</h3>
-                <div>
-                    <button class="btn btn-save" onclick="saveFaq(${f.id})">שמור</button>
-                    <button class="btn btn-danger" onclick="deleteFaqItem(${f.id})">מחק</button>
+    try {
+        const res = await fetch(API + '/faq');
+        if (!res.ok) { el.innerHTML = '<div class="empty"><p>שגיאה בטעינת שאלות ותשובות</p><button class="btn btn-add" onclick="loadFaq()">נסי שוב</button></div>'; return; }
+        const faqData = await res.json();
+        if (!faqData.length) {
+            el.innerHTML = '<div class="empty"><p>אין שאלות ותשובות עדיין</p><button class="btn btn-add" onclick="addFaq()">+ הוסיפי שאלה ראשונה</button></div>';
+            return;
+        }
+        el.innerHTML = faqData.map(f => `
+            <div class="card">
+                <div class="card-header">
+                    <h3>שאלה #${f.id}</h3>
+                    <div>
+                        <button class="btn btn-save" onclick="saveFaq(${f.id})">שמור</button>
+                        <button class="btn btn-danger" onclick="deleteFaqItem(${f.id})">מחק</button>
+                    </div>
                 </div>
+                <label>שאלה</label>
+                <input type="text" id="fq-${f.id}" value="${esc(f.question)}">
+                <label>תשובה</label>
+                <textarea id="fa-${f.id}">${esc(f.answer)}</textarea>
             </div>
-            <label>שאלה</label>
-            <input type="text" id="fq-${f.id}" value="${esc(f.question)}">
-            <label>תשובה</label>
-            <textarea id="fa-${f.id}">${esc(f.answer)}</textarea>
-        </div>
-    `).join('');
+        `).join('');
+    } catch(e) {
+        console.error('loadFaq error:', e);
+        el.innerHTML = '<div class="empty"><p>שגיאה בטעינה. בדקי את החיבור לאינטרנט.</p><button class="btn btn-add" onclick="loadFaq()">נסי שוב</button></div>';
+    }
 }
 
 async function saveFaq(id) {
@@ -683,9 +702,12 @@ function addFaq() {
 // ── Content Sections ──
 let sectionsData = [];
 async function loadContent() {
-    const res = await fetch(API + '/sections');
-    sectionsData = await res.json();
-    renderSections();
+    try {
+        const res = await fetch(API + '/sections');
+        if (!res.ok) { console.error('loadContent failed:', res.status); return; }
+        sectionsData = await res.json();
+        renderSections();
+    } catch(e) { console.error('loadContent error:', e); }
 }
 
 function renderSections() {
@@ -765,9 +787,11 @@ function addNote() {
 
 // ── Rules ──
 async function loadRules() {
-    const res = await fetch(API + '/rules');
-    const data = await res.json();
     const el = document.getElementById('rulesList');
+    try {
+    const res = await fetch(API + '/rules');
+    if (!res.ok) { el.innerHTML = '<div class="empty"><p>שגיאה בטעינת כללים</p><button class="btn btn-add" onclick="loadRules()">נסי שוב</button></div>'; return; }
+    const data = await res.json();
     // Filter out feedback rules
     const realRules = data.filter(r => !r.rule_key.startsWith('feedback_') && !r.rule_key.startsWith('guide_'));
     if (!realRules.length) {
@@ -793,6 +817,7 @@ async function loadRules() {
             </div>
         </div>
     `).join('');
+    } catch(e) { console.error('loadRules error:', e); el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadRules()">נסי שוב</button></div>'; }
 }
 
 async function saveRule(key) {
@@ -822,10 +847,12 @@ function addRule() {
 
 // ── Feedback (stored as rules with feedback_ prefix) ──
 async function loadFeedback() {
+    const el = document.getElementById('feedbackList');
+    try {
     const res = await fetch(API + '/rules');
+    if (!res.ok) { el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadFeedback()">נסי שוב</button></div>'; return; }
     const data = await res.json();
     const feedbackItems = data.filter(r => r.rule_key.startsWith('feedback_'));
-    const el = document.getElementById('feedbackList');
     if (!feedbackItems.length) {
         el.innerHTML = '<div class="empty"><p>אין משוב עדיין</p><button class="btn btn-add" onclick="addFeedback()">+ הוסיפי הערה ראשונה</button></div>';
         return;
@@ -845,6 +872,7 @@ async function loadFeedback() {
             <textarea id="fb-${r.rule_key}" rows="4">${esc(r.body)}</textarea>
         </div>
     `).join('');
+    } catch(e) { console.error('loadFeedback error:', e); el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadFeedback()">נסי שוב</button></div>'; }
 }
 
 function addFeedback() {
@@ -907,9 +935,12 @@ async function uploadFile(file) {
 let guideData = [];
 
 async function loadGuide() {
-    const res = await fetch(API + '/questionnaire');
-    guideData = await res.json();
-    renderGuide();
+    try {
+        const res = await fetch(API + '/questionnaire');
+        if (!res.ok) { console.error('loadGuide failed:', res.status); return; }
+        guideData = await res.json();
+        renderGuide();
+    } catch(e) { console.error('loadGuide error:', e); }
 }
 
 function renderGuide() {
