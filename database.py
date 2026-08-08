@@ -223,20 +223,25 @@ def build_rules_text() -> str:
 
 # ── Leads CRUD ─────────────────────────────────────────────────────
 
-def upsert_lead_from_message(phone: str, name: str) -> None:
+def upsert_lead_from_message(phone: str, name: str, source: str | None = None, tags: list[str] | None = None) -> None:
     """Create lead if new, update last_contact if existing."""
     now = _now()
     headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
+    data: dict = {
+        "phone": phone,
+        "name": name,
+        "last_contact": now,
+        "first_contact": now,
+        "updated_at": now,
+    }
+    if source is not None:
+        data["source"] = source
+    if tags is not None:
+        data["tags"] = tags
     httpx.post(
         _url("leads") + "?on_conflict=phone",
         headers=headers,
-        json={
-            "phone": phone,
-            "name": name,
-            "last_contact": now,
-            "first_contact": now,
-            "updated_at": now,
-        },
+        json=data,
     ).raise_for_status()
 
 

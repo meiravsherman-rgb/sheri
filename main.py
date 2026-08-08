@@ -14,7 +14,7 @@ from config import (
     WHATSAPP_PHONE_NUMBER_ID,
     WHATSAPP_VERIFY_TOKEN,
 )
-from database import init_db, is_seen, mark_seen, upsert_lead_from_message, seed_questionnaire
+from database import init_db, is_seen, mark_seen, upsert_lead_from_message, append, seed_questionnaire
 from admin import router as admin_router
 from crm import router as crm_router
 from seed_db import seed
@@ -38,6 +38,13 @@ BUTTON_TO_MESSAGE = {
     "btn_method": "ספרי לי מה זו שיטת שרמן",
     "btn_talk": "אני רוצה לדבר עם מירב",
 }
+
+# ── Static auto-reply (used while bot is in upgrade mode) ────────
+AUTO_REPLY = """הי, ברוכה הבאה!
+שמחה על העניין שאת מביעה בשיטת שרמן.
+המערכת שלי נמצאת כרגע בשדרוג.
+לכן, בשלב זה אני רק אוכל להעביר את הפניה שלך, ויחזרו אליך מהמשרד בהקדם.
+את מוזמנת לפרט כאן מה הצורך שלך."""
 
 
 @asynccontextmanager
@@ -87,7 +94,7 @@ async def api_chat(req: ChatRequest):
         from database import tail
         is_new_user = len(tail(req.phone, 1)) == 0
 
-        upsert_lead_from_message(req.phone, req.name)
+        upsert_lead_from_message(req.phone, req.name, source="סימולטור", tags=["סימולטור"])
         from agent import handle_message, generate_ai_summary
         reply = handle_message(req.phone, req.name, req.message)
         try:
@@ -238,7 +245,7 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
 
     # Track lead in CRM
     try:
-        upsert_lead_from_message(sender_phone, sender_name)
+        upsert_lead_from_message(sender_phone, sender_name, source="בוט וואטסאפ")
     except Exception as e:
         logger.warning(f"Failed to upsert lead: {e}")
 
@@ -248,33 +255,16 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
     except Exception as e:
         logger.warning(f"Failed to mark message as read: {e}")
 
-    # Check if this is a first-time user (no prior conversations)
-    from database import tail
-    is_new_user = len(tail(sender_phone, 1)) == 0
-
-    # Process with agent
+    # Save incoming message to conversations (for CRM chat tab)
     try:
-        from agent import handle_message, generate_ai_summary
-        reply = handle_message(sender_phone, sender_name, text)
-        send_reply(sender_phone, reply)
-        logger.info(f"Reply sent to {sender_phone}: {reply[:50]}...")
-
-        # Send welcome buttons after first greeting
-        if is_new_user:
-            try:
-                send_buttons(sender_phone, WELCOME_BUTTONS_TEXT, WELCOME_BUTTONS)
-                logger.info(f"Welcome buttons sent to {sender_phone}")
-            except Exception as e:
-                logger.warning(f"Failed to send welcome buttons: {e}")
-
-        # Auto-generate AI conversation summary
-        try:
-            generate_ai_summary(sender_phone)
-        except Exception as e:
-            logger.warning(f"AI summary failed: {e}")
+        append(sender_phone, "user", text)
     except Exception as e:
-        logger.error(f"Error processing message from {sender_phone}: {e}", exc_info=True)
-        try:
-            send_reply(sender_phone, "אופס, משהו לא עבד 🌸 אנא נסי שוב בעוד רגע.")
-        except Exception:
-            pass
+        logger.warning(f"Failed to save user message: {e}")
+
+    # Send static auto-reply (bot is in upgrade mode)
+    try:
+        send_reply(sender_phone, AUTO_REPLY)
+        append(sender_phone, "assistant", AUTO_REPLY)
+        logger.info(f"Auto-reply sent to {sender_phone}")
+    except Exception as e:
+        logger.error(f"Failed to send auto-reply to {sender_phone}: {e}", exc_info=True)
