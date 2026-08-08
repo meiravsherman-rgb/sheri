@@ -167,9 +167,53 @@
         .send-btn:disabled { background: #2a3942; cursor: not-allowed; }
         .send-btn svg { fill: #e9edef; width: 20px; height: 20px; }
 
+        /* Buttons */
+        .buttons-container {
+            max-width: 65%;
+            margin-right: auto;
+            margin-left: 0;
+            margin-bottom: 4px;
+        }
+        .buttons-container .buttons-header {
+            background: #202c33;
+            color: #e9edef;
+            padding: 8px 12px;
+            border-radius: 8px 8px 0 0;
+            border-top-right-radius: 8px;
+            border-top-left-radius: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .buttons-container .btn-option {
+            display: block;
+            width: 100%;
+            background: #202c33;
+            color: #00a884;
+            border: none;
+            border-top: 1px solid #2a3942;
+            padding: 10px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .buttons-container .btn-option:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+        .buttons-container .btn-option:hover {
+            background: #2a3942;
+        }
+        .buttons-container.disabled .btn-option {
+            color: #8696a0;
+            cursor: default;
+            pointer-events: none;
+        }
+
         @media (max-width: 768px) {
             .chat { padding: 10px 12px; }
             .message { max-width: 85%; }
+            .buttons-container { max-width: 85%; }
         }
     </style>
 </head>
@@ -269,6 +313,67 @@
 
                 const data = await resp.json();
                 addMessage(data.reply || 'שגיאה בקבלת תשובה', 'bot');
+
+                // Show buttons if returned
+                if (data.buttons) {
+                    addButtons(data.buttons.text, data.buttons.options);
+                }
+            } catch (err) {
+                addMessage('שגיאה בחיבור לשרת: ' + err.message, 'bot');
+            }
+
+            sendBtn.disabled = false;
+            msgInput.focus();
+        }
+
+        // Button-to-message mapping (mirrors BUTTON_TO_MESSAGE in main.py)
+        const BUTTON_MESSAGES = {
+            'btn_courses': 'אשמח לשמוע על הקורסים והמחירים',
+            'btn_method': 'ספרי לי מה זו שיטת שרמן',
+            'btn_talk': 'אני רוצה לדבר עם מירב',
+        };
+
+        function addButtons(headerText, buttons) {
+            const typing = document.querySelector('.typing');
+            if (typing) typing.remove();
+
+            const container = document.createElement('div');
+            container.className = 'buttons-container';
+
+            let html = `<div class="buttons-header">${escapeHtml(headerText)}</div>`;
+            for (const btn of buttons) {
+                html += `<button class="btn-option" data-id="${btn.id}" onclick="clickButton(this, '${btn.id}')">${escapeHtml(btn.title)}</button>`;
+            }
+            container.innerHTML = html;
+            chat.appendChild(container);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function clickButton(el, btnId) {
+            // Disable all buttons in this container
+            const container = el.closest('.buttons-container');
+            container.classList.add('disabled');
+
+            // Show clicked button as a user message
+            const text = BUTTON_MESSAGES[btnId] || el.textContent;
+            const name = document.getElementById('userName').value.trim() || 'User';
+            const phone = document.getElementById('userPhone').value.trim() || '972501234567';
+
+            addMessage(el.textContent, 'user');
+            sendBtn.disabled = true;
+            showTyping();
+
+            try {
+                const resp = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, name, message: text })
+                });
+                const data = await resp.json();
+                addMessage(data.reply || 'שגיאה בקבלת תשובה', 'bot');
+                if (data.buttons) {
+                    addButtons(data.buttons.text, data.buttons.options);
+                }
             } catch (err) {
                 addMessage('שגיאה בחיבור לשרת: ' + err.message, 'bot');
             }

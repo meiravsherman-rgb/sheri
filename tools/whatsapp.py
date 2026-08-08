@@ -47,6 +47,35 @@ def send_template(phone: str, template_name: str, language: str = "he") -> dict:
         return resp.json()
 
 
+def send_buttons(phone: str, body_text: str, buttons: list[dict]) -> dict:
+    """Send an interactive reply-buttons message (max 3 buttons, 20 chars each).
+
+    Args:
+        phone: Phone number in international format without + (e.g. '972501234567')
+        body_text: Message body text
+        buttons: List of dicts with 'id' and 'title' keys
+    """
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": body_text},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": b["id"], "title": b["title"]}}
+                    for b in buttons[:3]
+                ]
+            },
+        },
+    }
+    with httpx.Client(timeout=30) as client:
+        resp = client.post(_API_URL, headers=_HEADERS, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+
 def mark_as_read(message_id: str) -> dict:
     """Mark an incoming message as read (blue checkmarks)."""
     payload = {

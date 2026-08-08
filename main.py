@@ -18,10 +18,26 @@ from database import init_db, is_seen, mark_seen, upsert_lead_from_message, seed
 from admin import router as admin_router
 from crm import router as crm_router
 from seed_db import seed
-from tools.whatsapp import send_reply, mark_as_read
+from tools.whatsapp import send_reply, send_buttons, mark_as_read
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sheri")
+
+# ── Welcome buttons (shown on first message) ─────────────────────
+WELCOME_BUTTONS = [
+    {"id": "btn_courses", "title": "הקורסים שלנו"},
+    {"id": "btn_method", "title": "מה זה שיטת שרמן?"},
+    {"id": "btn_talk", "title": "שיחה עם מירב"},
+]
+
+WELCOME_BUTTONS_TEXT = "איך אוכל לעזור לך? בחרי אחת מהאפשרויות:"
+
+# Map button IDs to natural language so the agent understands intent
+BUTTON_TO_MESSAGE = {
+    "btn_courses": "אשמח לשמוע על הקורסים והמחירים",
+    "btn_method": "ספרי לי מה זו שיטת שרמן",
+    "btn_talk": "אני רוצה לדבר עם מירב",
+}
 
 
 @asynccontextmanager
@@ -68,6 +84,9 @@ class ResetRequest(BaseModel):
 async def api_chat(req: ChatRequest):
     """Chat simulator endpoint — same agent, no WhatsApp."""
     try:
+        from database import tail
+        is_new_user = len(tail(req.phone, 1)) == 0
+
         upsert_lead_from_message(req.phone, req.name)
         from agent import handle_message, generate_ai_summary
         reply = handle_message(req.phone, req.name, req.message)
@@ -75,7 +94,14 @@ async def api_chat(req: ChatRequest):
             generate_ai_summary(req.phone)
         except Exception:
             pass
-        return {"reply": reply}
+
+        result = {"reply": reply}
+        if is_new_user:
+            result["buttons"] = {
+                "text": WELCOME_BUTTONS_TEXT,
+                "options": WELCOME_BUTTONS,
+            }
+        return result
     except Exception as e:
         logger.error(f"Chat API error: {e}", exc_info=True)
         return {"reply": f"שגיאה: {e}"}
@@ -184,13 +210,19 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
         return
     mark_seen(message_id)
 
-    # Only handle text messages for now
-    if msg_type != "text":
-        logger.info(f"Skipping non-text message type: {msg_type}")
+    # Handle interactive messages (button clicks)
+    if msg_type == "interactive":
+        interactive = msg.get("interactive", {})
+        btn_reply = interactive.get("button_reply", {})
+        btn_id = btn_reply.get("id", "")
+        text = BUTTON_TO_MESSAGE.get(btn_id, btn_reply.get("title", ""))
+        sender_phone = msg.get("from", "")
+    elif msg_type == "text":
+        sender_phone = msg.get("from", "")
+        text = msg.get("text", {}).get("body", "")
+    else:
+        logger.info(f"Skipping message type: {msg_type}")
         return
-
-    sender_phone = msg.get("from", "")
-    text = msg.get("text", {}).get("body", "")
 
     if not sender_phone or not text:
         return
@@ -216,12 +248,25 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
     except Exception as e:
         logger.warning(f"Failed to mark message as read: {e}")
 
+    # Check if this is a first-time user (no prior conversations)
+    from database import tail
+    is_new_user = len(tail(sender_phone, 1)) == 0
+
     # Process with agent
     try:
         from agent import handle_message, generate_ai_summary
         reply = handle_message(sender_phone, sender_name, text)
         send_reply(sender_phone, reply)
         logger.info(f"Reply sent to {sender_phone}: {reply[:50]}...")
+
+        # Send welcome buttons after first greeting
+        if is_new_user:
+            try:
+                send_buttons(sender_phone, WELCOME_BUTTONS_TEXT, WELCOME_BUTTONS)
+                logger.info(f"Welcome buttons sent to {sender_phone}")
+            except Exception as e:
+                logger.warning(f"Failed to send welcome buttons: {e}")
+
         # Auto-generate AI conversation summary
         try:
             generate_ai_summary(sender_phone)
