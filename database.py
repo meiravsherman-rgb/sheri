@@ -303,7 +303,7 @@ def get_lead_timeline(phone: str, limit: int = 50) -> list[dict]:
     return r.json()
 
 
-def get_lead_conversations(phone: str, limit: int = 50) -> list[dict]:
+def get_lead_conversations(phone: str, limit: int = 1000) -> list[dict]:
     r = httpx.get(_url("conversations"), headers=_get_headers(), params={
         "select": "role,content,created_at",
         "chat_id": f"eq.{phone}",
