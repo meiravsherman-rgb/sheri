@@ -30,7 +30,7 @@ WELCOME_BUTTONS = [
     {"id": "btn_talk", "title": "שיחה עם מירב"},
 ]
 
-WELCOME_BUTTONS_TEXT = "איך אוכל לעזור לך? בחרי אחת מהאפשרויות:"
+WELCOME_BUTTONS_TEXT = "בחרי אחת מהאפשרויות:"
 
 # Map button IDs to natural language so the agent understands intent
 BUTTON_TO_MESSAGE = {
