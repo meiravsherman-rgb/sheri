@@ -255,16 +255,30 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
     except Exception as e:
         logger.warning(f"Failed to mark message as read: {e}")
 
-    # Save incoming message to conversations (for CRM chat tab)
-    try:
-        append(sender_phone, "user", text)
-    except Exception as e:
-        logger.warning(f"Failed to save user message: {e}")
+    # Check if this is a new user (no prior conversations)
+    from database import tail
+    is_new_user = len(tail(sender_phone, 1)) == 0
 
-    # Send static auto-reply (bot is in upgrade mode)
+    # Process with AI agent
     try:
+        from agent import handle_message, generate_ai_summary
+        reply = handle_message(sender_phone, sender_name, text)
+        send_reply(sender_phone, reply)
+        logger.info(f"Agent reply sent to {sender_phone}")
+
+        # Send welcome buttons for new users
+        if is_new_user:
+            try:
+                send_buttons(sender_phone, WELCOME_BUTTONS_TEXT, WELCOME_BUTTONS)
+            except Exception as e:
+                logger.warning(f"Failed to send welcome buttons: {e}")
+
+        # Generate AI summary for CRM
+        try:
+            generate_ai_summary(sender_phone)
+        except Exception:
+            pass
+    except Exception as e:
+        logger.error(f"Agent error for {sender_phone}: {e}", exc_info=True)
         send_reply(sender_phone, AUTO_REPLY)
         append(sender_phone, "assistant", AUTO_REPLY)
-        logger.info(f"Auto-reply sent to {sender_phone}")
-    except Exception as e:
-        logger.error(f"Failed to send auto-reply to {sender_phone}: {e}", exc_info=True)
