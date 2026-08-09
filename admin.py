@@ -725,7 +725,7 @@ function renderSections() {
     // Separate: regular content, notes (note_*), uploaded docs (doc_*)
     const regular = sectionsData.filter(s => !s.section_key.startsWith('note_') && !s.section_key.startsWith('doc_') && !s.section_key.startsWith('guide_'));
     const notes = sectionsData.filter(s => s.section_key.startsWith('note_'));
-    const docs = sectionsData.filter(s => s.section_key.startsWith('doc_'));
+    const docs = sectionsData.filter(s => s.section_key.startsWith('doc_') || (!s.section_key.startsWith('note_') && !s.section_key.startsWith('guide_')));
 
     if (!regular.length) {
         el.innerHTML = '<div class="empty"><p>אין תוכן עדיין</p><button class="btn btn-add" onclick="addSection()">+ הוסיפי נושא ראשון</button></div>';
