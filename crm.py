@@ -222,14 +222,14 @@ body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color
 .login-box { background: #fff; padding: 2.5rem; border-radius: var(--radius); text-align: center; width: 340px; box-shadow: var(--shadow-hover); }
 .login-box h2 { color: var(--pink); margin-bottom: .5rem; font-size: 1.5rem; }
 .login-box p { color: #999; font-size: .85rem; margin-bottom: 1.5rem; }
-.login-box .pass-wrapper { position: relative; margin-bottom: 1rem; }
-.login-box input { width: 100%; padding: .8rem; border: 2px solid #eee; border-radius: 12px; text-align: center; font-size: 1rem; outline: none; transition: var(--transition); }
-.login-box input:focus { border-color: var(--pink); }
-.login-box .eye-btn { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #aaa; padding: 4px; }
-.login-box .eye-btn:hover { color: #666; }
-.login-box .login-error { color: var(--red); font-size: .82rem; margin-bottom: .5rem; min-height: 1.2em; }
-.login-box button { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; border: none; padding: .8rem 2rem; border-radius: 12px; cursor: pointer; font-size: 1rem; width: 100%; transition: var(--transition); }
-.login-box button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(233,30,140,.4); }
+.login-box .pass-wrapper { position: relative; margin-bottom: .5rem; direction: ltr; }
+.login-box .pass-wrapper input { width: 100%; padding: .8rem 2.5rem .8rem .8rem; border: 2px solid #eee; border-radius: 12px; text-align: center; font-size: 1rem; outline: none; transition: var(--transition); }
+.login-box .pass-wrapper input:focus { border-color: var(--pink); }
+.login-box .eye-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #bbb; padding: 2px 4px; line-height: 1; }
+.login-box .eye-toggle:hover { color: #666; }
+.login-box .login-error { color: var(--red); font-size: .85rem; margin-bottom: .5rem; min-height: 1.3em; font-weight: 600; }
+.login-box .login-btn { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; border: none; padding: .8rem 2rem; border-radius: 12px; cursor: pointer; font-size: 1rem; width: 100%; transition: var(--transition); }
+.login-box .login-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(233,30,140,.4); }
 
 /* Header */
 header { background: linear-gradient(135deg, var(--pink), var(--pink-dark), #8e24aa); color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 20px rgba(233,30,140,.3); }
@@ -423,10 +423,10 @@ header a:hover { color: #fff; }
   <p>ניהול לידים ומעקב לקוחות</p>
   <div class="pass-wrapper">
     <input type="password" id="loginPass" placeholder="סיסמה" onkeydown="if(event.key==='Enter')doLogin()">
-    <button type="button" class="eye-btn" onclick="togglePassView()">👁</button>
+    <button type="button" class="eye-toggle" id="eyeBtn" onclick="togglePassView()">👁</button>
   </div>
   <div class="login-error" id="loginError"></div>
-  <button onclick="doLogin()">כניסה</button>
+  <button class="login-btn" onclick="doLogin()">כניסה</button>
 </div>
 </div>
 
@@ -513,17 +513,19 @@ let selectedLeads = new Set();
 // Auth
 function togglePassView() {
   const inp = document.getElementById('loginPass');
-  const btn = inp.nextElementSibling;
+  const btn = document.getElementById('eyeBtn');
   if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
   else { inp.type = 'password'; btn.textContent = '👁'; }
+  inp.focus();
 }
 async function doLogin() {
-  const pass = document.getElementById('loginPass').value;
+  const pass = document.getElementById('loginPass').value.trim();
   const errEl = document.getElementById('loginError');
   errEl.textContent = '';
+  if (!pass) { errEl.textContent = 'הקלד סיסמה'; return; }
   const r = await fetch('/admin/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass})});
   if (r.ok) { document.getElementById('loginOverlay').style.display='none'; init(); }
-  else { errEl.textContent = 'סיסמה שגויה, נסה שוב'; }
+  else { errEl.textContent = 'סיסמה שגויה'; }
 }
 (async()=>{
   try { const r=await fetch(API+'/dashboard'); if(r.ok){document.getElementById('loginOverlay').style.display='none';init();} } catch(e){}
