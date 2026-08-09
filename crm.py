@@ -629,8 +629,8 @@ function buildChatWithSessions(msgs) {
     const collapsed = !isLatest;
     const id = 'session_' + num;
     html += '<div class="session-block">';
-    html += '<div class="session-header' + (collapsed ? ' collapsed' : '') + '" onclick="toggleSession(\'' + id + '\', this)">';
-    html += '<span><span class="arrow">▼</span> שיחה ' + num + ' — ' + fmtDate(s.start) + ' (' + s.msgs.length + ' הודעות)</span></div>';
+    html += '<div class="session-header' + (collapsed ? ' collapsed' : '') + '" onclick="toggleSession(' + "'" + id + "'" + ', this)">';
+    html += '<span><span class="arrow">' + (collapsed ? '◀' : '▼') + '</span> שיחה ' + num + ' — ' + fmtDate(s.start) + ' (' + s.msgs.length + ' הודעות)</span></div>';
     html += '<div id="' + id + '" class="session-messages' + (collapsed ? ' collapsed' : '') + '">';
     for (const m of s.msgs) {
       html += '<div class="chat-msg ' + m.role + '"><div>' + m.content + '</div><div class="time">' + fmtDate(m.created_at) + '</div></div>';
@@ -641,9 +641,11 @@ function buildChatWithSessions(msgs) {
 }
 
 function toggleSession(id, header) {
-  const el = document.getElementById(id);
+  var el = document.getElementById(id);
   el.classList.toggle('collapsed');
   header.classList.toggle('collapsed');
+  var arrow = header.querySelector('.arrow');
+  if (arrow) arrow.textContent = el.classList.contains('collapsed') ? '\u25C0' : '\u25BC';
 }
 
 function getStatusColor(key) {
