@@ -12,6 +12,7 @@ from database import (
     log_lead_event, get_lead_timeline, get_lead_conversations,
     create_purchase, get_purchases, get_dashboard_stats,
     get_all_courses, get_crm_settings, update_crm_setting,
+    display_phone,
 )
 
 router = APIRouter(prefix="/crm")
@@ -62,12 +63,23 @@ class SettingUpdate(BaseModel):
 
 @router.get("/api/dashboard", dependencies=[Depends(check_auth)])
 async def api_dashboard():
-    return get_dashboard_stats()
+    stats = get_dashboard_stats()
+    for l in stats.get("upcoming_followups", []):
+        l["phone"] = display_phone(l.get("phone", ""))
+    for l in stats.get("needs_attention", []):
+        l["phone"] = display_phone(l.get("phone", ""))
+    return stats
 
+
+def _leads_display(leads: list[dict]) -> list[dict]:
+    """Convert phone to display format for CRM."""
+    for l in leads:
+        l["phone"] = display_phone(l.get("phone", ""))
+    return leads
 
 @router.get("/api/leads", dependencies=[Depends(check_auth)])
 async def api_leads(status: str = "", search: str = "", tag: str = ""):
-    return get_leads(status=status, search=search, tag=tag)
+    return _leads_display(get_leads(status=status, search=search, tag=tag))
 
 
 @router.get("/api/leads/{phone}", dependencies=[Depends(check_auth)])
@@ -75,6 +87,7 @@ async def api_lead_detail(phone: str):
     lead = get_lead(phone)
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+    lead["phone"] = display_phone(lead.get("phone", ""))
     return lead
 
 
@@ -113,7 +126,7 @@ async def api_bulk_status(req: BulkStatus):
 
 @router.get("/api/leads-export", dependencies=[Depends(check_auth)])
 async def api_export_csv():
-    leads = get_leads()
+    leads = _leads_display(get_leads())
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["phone", "name", "status", "source", "tags", "notes", "first_contact", "last_contact", "total_paid"])
@@ -143,7 +156,10 @@ async def api_conversations(phone: str, limit: int = 1000):
 
 @router.get("/api/purchases", dependencies=[Depends(check_auth)])
 async def api_all_purchases(lead_phone: str = ""):
-    return get_purchases(lead_phone)
+    purchases = get_purchases(lead_phone)
+    for p in purchases:
+        p["lead_phone"] = display_phone(p.get("lead_phone", ""))
+    return purchases
 
 
 @router.post("/api/purchases", dependencies=[Depends(check_auth)])

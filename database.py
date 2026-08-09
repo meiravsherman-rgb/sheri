@@ -31,12 +31,19 @@ def _now() -> str:
 
 
 def normalize_phone(phone: str) -> str:
-    """Normalize Israeli phone to 972... format."""
+    """Normalize Israeli phone to 972... format (internal storage key)."""
     phone = phone.strip().replace("-", "").replace(" ", "").replace("+", "")
     if phone.startswith("05"):
         phone = "972" + phone[1:]
     elif phone.startswith("5") and len(phone) == 9:
         phone = "972" + phone
+    return phone
+
+
+def display_phone(phone: str) -> str:
+    """Convert 972... to 05... for display."""
+    if phone and phone.startswith("972") and len(phone) >= 12:
+        return "0" + phone[3:]
     return phone
 
 
@@ -241,9 +248,11 @@ def upsert_lead_from_message(phone: str, name: str, source: str | None = None, t
     now = _now()
     existing = get_lead(phone)
     if existing:
-        # Update: keep first_contact, update name + last_contact
+        # Update: keep first_contact, update last_contact
         updates: dict = {"last_contact": now, "updated_at": now}
-        if name and name != existing.get("name"):
+        # Only set name if lead has no name yet (don't overwrite manual CRM edits)
+        existing_name = (existing.get("name") or "").strip()
+        if not existing_name and name:
             updates["name"] = name
         update_lead(phone, **updates)
     else:
