@@ -222,8 +222,12 @@ body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color
 .login-box { background: #fff; padding: 2.5rem; border-radius: var(--radius); text-align: center; width: 340px; box-shadow: var(--shadow-hover); }
 .login-box h2 { color: var(--pink); margin-bottom: .5rem; font-size: 1.5rem; }
 .login-box p { color: #999; font-size: .85rem; margin-bottom: 1.5rem; }
-.login-box input { width: 100%; padding: .8rem; border: 2px solid #eee; border-radius: 12px; margin-bottom: 1rem; text-align: center; font-size: 1rem; outline: none; transition: var(--transition); }
+.login-box .pass-wrapper { position: relative; margin-bottom: 1rem; }
+.login-box input { width: 100%; padding: .8rem; border: 2px solid #eee; border-radius: 12px; text-align: center; font-size: 1rem; outline: none; transition: var(--transition); }
 .login-box input:focus { border-color: var(--pink); }
+.login-box .eye-btn { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #aaa; padding: 4px; }
+.login-box .eye-btn:hover { color: #666; }
+.login-box .login-error { color: var(--red); font-size: .82rem; margin-bottom: .5rem; min-height: 1.2em; }
 .login-box button { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; border: none; padding: .8rem 2rem; border-radius: 12px; cursor: pointer; font-size: 1rem; width: 100%; transition: var(--transition); }
 .login-box button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(233,30,140,.4); }
 
@@ -417,7 +421,11 @@ header a:hover { color: #fff; }
 <div class="login-box">
   <h2>CRM שיטת שרמן</h2>
   <p>ניהול לידים ומעקב לקוחות</p>
-  <input type="password" id="loginPass" placeholder="סיסמה" onkeydown="if(event.key==='Enter')doLogin()">
+  <div class="pass-wrapper">
+    <input type="password" id="loginPass" placeholder="סיסמה" onkeydown="if(event.key==='Enter')doLogin()">
+    <button type="button" class="eye-btn" onclick="togglePassView()">👁</button>
+  </div>
+  <div class="login-error" id="loginError"></div>
   <button onclick="doLogin()">כניסה</button>
 </div>
 </div>
@@ -503,11 +511,19 @@ let settings = { statuses: [], tags: [], sources: [] };
 let selectedLeads = new Set();
 
 // Auth
+function togglePassView() {
+  const inp = document.getElementById('loginPass');
+  const btn = inp.nextElementSibling;
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
 async function doLogin() {
   const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
   const r = await fetch('/admin/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pass})});
   if (r.ok) { document.getElementById('loginOverlay').style.display='none'; init(); }
-  else alert('סיסמה שגויה');
+  else { errEl.textContent = 'סיסמה שגויה, נסה שוב'; }
 }
 (async()=>{
   try { const r=await fetch(API+'/dashboard'); if(r.ok){document.getElementById('loginOverlay').style.display='none';init();} } catch(e){}
