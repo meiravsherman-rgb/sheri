@@ -30,6 +30,16 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def normalize_phone(phone: str) -> str:
+    """Normalize Israeli phone to 972... format."""
+    phone = phone.strip().replace("-", "").replace(" ", "").replace("+", "")
+    if phone.startswith("05"):
+        phone = "972" + phone[1:]
+    elif phone.startswith("5") and len(phone) == 9:
+        phone = "972" + phone
+    return phone
+
+
 def init_db() -> None:
     """Verify Supabase connection."""
     r = httpx.get(_url("courses"), headers=_get_headers(), params={"select": "id", "limit": "1"})
@@ -39,12 +49,14 @@ def init_db() -> None:
 # ── Conversations ─────────────────────────────────────────────────
 
 def append(chat_id: str, role: str, content: str) -> None:
+    chat_id = normalize_phone(chat_id)
     httpx.post(_url("conversations"), headers=_get_headers(), json={
         "chat_id": chat_id, "role": role, "content": content, "created_at": _now(),
     }).raise_for_status()
 
 
 def tail(chat_id: str, n: int = 20) -> list[dict]:
+    chat_id = normalize_phone(chat_id)
     r = httpx.get(_url("conversations"), headers=_get_headers(), params={
         "select": "role,content",
         "chat_id": f"eq.{chat_id}",
@@ -224,25 +236,30 @@ def build_rules_text() -> str:
 # ── Leads CRUD ─────────────────────────────────────────────────────
 
 def upsert_lead_from_message(phone: str, name: str, source: str | None = None, tags: list[str] | None = None) -> None:
-    """Create lead if new, update last_contact if existing."""
+    """Create lead if new, update last_contact and name if existing."""
+    phone = normalize_phone(phone)
     now = _now()
-    headers = {**_get_headers(), "Prefer": "resolution=merge-duplicates,return=representation"}
-    data: dict = {
-        "phone": phone,
-        "name": name,
-        "last_contact": now,
-        "first_contact": now,
-        "updated_at": now,
-    }
-    if source is not None:
-        data["source"] = source
-    if tags is not None:
-        data["tags"] = tags
-    httpx.post(
-        _url("leads") + "?on_conflict=phone",
-        headers=headers,
-        json=data,
-    ).raise_for_status()
+    existing = get_lead(phone)
+    if existing:
+        # Update: keep first_contact, update name + last_contact
+        updates: dict = {"last_contact": now, "updated_at": now}
+        if name and name != existing.get("name"):
+            updates["name"] = name
+        update_lead(phone, **updates)
+    else:
+        # New lead
+        data: dict = {
+            "phone": phone,
+            "name": name,
+            "last_contact": now,
+            "first_contact": now,
+            "updated_at": now,
+        }
+        if source is not None:
+            data["source"] = source
+        if tags is not None:
+            data["tags"] = tags
+        httpx.post(_url("leads"), headers=_get_headers(), json=data).raise_for_status()
 
 
 def get_leads(status: str = "", search: str = "", tag: str = "") -> list[dict]:
@@ -259,6 +276,7 @@ def get_leads(status: str = "", search: str = "", tag: str = "") -> list[dict]:
 
 
 def get_lead(phone: str) -> dict | None:
+    phone = normalize_phone(phone)
     r = httpx.get(_url("leads"), headers=_get_headers(), params={
         "select": "*", "phone": f"eq.{phone}", "limit": "1",
     })
@@ -268,11 +286,13 @@ def get_lead(phone: str) -> dict | None:
 
 
 def update_lead(phone: str, **fields) -> None:
+    phone = normalize_phone(phone)
     fields["updated_at"] = _now()
     httpx.patch(_url("leads"), headers=_get_headers(), params={"phone": f"eq.{phone}"}, json=fields).raise_for_status()
 
 
 def create_lead_manual(phone: str, name: str, source: str = "manual") -> None:
+    phone = normalize_phone(phone)
     now = _now()
     httpx.post(_url("leads"), headers=_get_headers(), json={
         "phone": phone, "name": name, "source": source,
@@ -284,6 +304,7 @@ def create_lead_manual(phone: str, name: str, source: str = "manual") -> None:
 
 def log_lead_event(phone: str, event_type: str, event_data: dict = None) -> None:
     import json
+    phone = normalize_phone(phone)
     httpx.post(_url("lead_events"), headers=_get_headers(), json={
         "lead_phone": phone,
         "event_type": event_type,
@@ -293,6 +314,7 @@ def log_lead_event(phone: str, event_type: str, event_data: dict = None) -> None
 
 
 def get_lead_timeline(phone: str, limit: int = 50) -> list[dict]:
+    phone = normalize_phone(phone)
     r = httpx.get(_url("lead_events"), headers=_get_headers(), params={
         "select": "*",
         "lead_phone": f"eq.{phone}",
@@ -304,6 +326,7 @@ def get_lead_timeline(phone: str, limit: int = 50) -> list[dict]:
 
 
 def get_lead_conversations(phone: str, limit: int = 1000) -> list[dict]:
+    phone = normalize_phone(phone)
     r = httpx.get(_url("conversations"), headers=_get_headers(), params={
         "select": "role,content,created_at",
         "chat_id": f"eq.{phone}",
