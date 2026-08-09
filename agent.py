@@ -137,13 +137,14 @@ def generate_ai_summary(chat_id: str) -> None:
 
         response = _client.messages.create(
             model=LLM_MODEL,
-            max_tokens=300,
-            system="סכמי שיחה בעברית במשפט אחד-שניים מקסימום. רק מה חשוב: מה הלקוחה צריכה, מה הסטטוס, ואם יש צעד הבא. בלי לפרט דברים מובנים מאליהם. קצר ותכליתי.",
-            messages=[{"role": "user", "content": f"סכמי את השיחה הזו:\n\n{convo_text}"}],
+            max_tokens=150,
+            system="סכמי בעברית ב-1-2 משפטים בלבד. רק: מה רצתה, מה קיבלה, מה הצעד הבא. בלי מילות מילוי.",
+            messages=[{"role": "user", "content": f"סכמי:\n\n{convo_text}"}],
         )
 
         summary = response.content[0].text.strip()
         if summary:
             update_lead(chat_id, ai_summary=summary)
+            logger.info(f"AI summary for {chat_id}: {summary[:60]}")
     except Exception as e:
-        logger.warning(f"AI summary failed for {chat_id}: {e}")
+        logger.error(f"AI summary failed for {chat_id}: {e}", exc_info=True)

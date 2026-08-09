@@ -363,9 +363,14 @@ header a:hover { color: #fff; }
 .chat-msg.user { background: #dcf8c6; margin-left: auto; border-bottom-left-radius: 2px; }
 .chat-msg.assistant { background: #fff; border-bottom-right-radius: 2px; }
 .chat-msg .time { font-size: .68rem; color: #999; margin-top: .2rem; text-align: left; }
-.session-divider { display: flex; align-items: center; gap: .6rem; margin: 1rem 0; }
-.session-divider::before, .session-divider::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,.2); }
-.session-divider span { background: rgba(0,0,0,.12); color: #555; font-size: .72rem; padding: .25rem .8rem; border-radius: 12px; white-space: nowrap; font-weight: 600; }
+.session-block { margin-bottom: .5rem; }
+.session-header { display: flex; align-items: center; gap: .6rem; margin: .6rem 0; cursor: pointer; user-select: none; }
+.session-header::before, .session-header::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,.2); }
+.session-header span { background: rgba(0,0,0,.12); color: #555; font-size: .72rem; padding: .25rem .8rem; border-radius: 12px; white-space: nowrap; font-weight: 600; display: flex; align-items: center; gap: .3rem; }
+.session-header .arrow { transition: transform .2s; font-size: .6rem; }
+.session-header.collapsed .arrow { transform: rotate(-90deg); }
+.session-messages { transition: max-height .3s ease; overflow: hidden; }
+.session-messages.collapsed { max-height: 0 !important; }
 
 /* Settings */
 .settings-section { background: #fff; border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
@@ -571,24 +576,44 @@ function fmtShortDate(iso) { if(!iso)return'—'; return new Date(iso).toLocaleD
 function buildChatWithSessions(msgs) {
   if (!msgs.length) return '';
   const SESSION_GAP_MS = 2 * 60 * 60 * 1000; // 2 hours
-  let html = '';
-  let sessionNum = 0;
-  for (let i = 0; i < msgs.length; i++) {
-    const m = msgs[i];
-    const mTime = new Date(m.created_at);
-    if (i === 0) {
-      sessionNum++;
-      html += '<div class="session-divider"><span>שיחה ' + sessionNum + ' — ' + fmtDate(m.created_at) + '</span></div>';
+  // Split into sessions
+  const sessions = [];
+  let cur = { msgs: [msgs[0]], start: msgs[0].created_at };
+  for (let i = 1; i < msgs.length; i++) {
+    if (new Date(msgs[i].created_at) - new Date(msgs[i-1].created_at) > SESSION_GAP_MS) {
+      sessions.push(cur);
+      cur = { msgs: [msgs[i]], start: msgs[i].created_at };
     } else {
-      const prevTime = new Date(msgs[i-1].created_at);
-      if (mTime - prevTime > SESSION_GAP_MS) {
-        sessionNum++;
-        html += '<div class="session-divider"><span>שיחה ' + sessionNum + ' — ' + fmtDate(m.created_at) + '</span></div>';
-      }
+      cur.msgs.push(msgs[i]);
     }
-    html += '<div class="chat-msg ' + m.role + '"><div>' + m.content + '</div><div class="time">' + fmtDate(m.created_at) + '</div></div>';
+  }
+  sessions.push(cur);
+  // Reverse: newest first
+  sessions.reverse();
+  // Number sessions: 1 = newest
+  let html = '';
+  for (let si = 0; si < sessions.length; si++) {
+    const s = sessions[si];
+    const num = sessions.length - si;
+    const isLatest = si === 0;
+    const collapsed = !isLatest;
+    const id = 'session_' + num;
+    html += '<div class="session-block">';
+    html += '<div class="session-header' + (collapsed ? ' collapsed' : '') + '" onclick="toggleSession(\'' + id + '\', this)">';
+    html += '<span><span class="arrow">▼</span> שיחה ' + num + ' — ' + fmtDate(s.start) + ' (' + s.msgs.length + ' הודעות)</span></div>';
+    html += '<div id="' + id + '" class="session-messages' + (collapsed ? ' collapsed' : '') + '">';
+    for (const m of s.msgs) {
+      html += '<div class="chat-msg ' + m.role + '"><div>' + m.content + '</div><div class="time">' + fmtDate(m.created_at) + '</div></div>';
+    }
+    html += '</div></div>';
   }
   return html;
+}
+
+function toggleSession(id, header) {
+  const el = document.getElementById(id);
+  el.classList.toggle('collapsed');
+  header.classList.toggle('collapsed');
 }
 
 function getStatusColor(key) {
