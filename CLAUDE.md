@@ -5,7 +5,7 @@ Respond in Hebrew (עברית).
 
 ## Project
 WhatsApp AI bot for Merav Sherman — שיטת שרמן, בריאות נשית טבעית.
-FastAPI + Claude Haiku + Supabase + Render.
+FastAPI + Claude Sonnet 4.6 + Supabase + Render.
 
 ## Deploy Flow (MANDATORY after every change)
 After ANY code change, always do all 3 steps:
