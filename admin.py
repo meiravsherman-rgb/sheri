@@ -343,6 +343,14 @@ textarea { min-height: 80px; resize: vertical; }
 .empty { text-align: center; padding: 40px; color: #aaa; }
 .empty p { margin-bottom: 16px; }
 
+/* Doc list */
+.doc-item { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.doc-item .doc-icon { font-size: 22px; flex-shrink: 0; }
+.doc-item .doc-name { flex: 1; font-weight: 500; font-size: 14px; color: #444; }
+.doc-item .doc-size { font-size: 12px; color: #aaa; margin-left: 8px; }
+.doc-item .doc-actions { display: flex; gap: 6px; }
+.doc-preview { background: #faf8f5; border: 1px solid #e8ddd5; border-radius: 8px; padding: 14px; margin-top: 8px; margin-bottom: 8px; font-size: 13px; color: #555; max-height: 300px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6; display: none; }
+
 /* Responsive */
 @media (max-width: 600px) {
     .area-btn { padding: 12px 8px; font-size: 14px; }
@@ -734,7 +742,7 @@ function renderSections() {
     if (!docs.length) {
         docsEl.innerHTML = '<div class="empty"><p>טרם הועלו מסמכים</p></div>';
     } else {
-        docsEl.innerHTML = docs.map(s => sectionCard(s)).join('');
+        docsEl.innerHTML = docs.map(s => docListItem(s)).join('');
     }
 }
 
@@ -987,6 +995,37 @@ async function saveAllGuide() {
     }
     showStatus(saved > 0 ? 'נשמרו ' + saved + ' תשובות והבוט עודכן' : 'אין שינויים לשמור');
     loadGuide();
+}
+
+// ── Doc list ──
+function docListItem(s) {
+    var chars = (s.body || '').length;
+    var sizeStr = chars > 1000 ? Math.round(chars/1000) + 'K' : chars;
+    var k = s.section_key;
+    var html = '<div>';
+    html += '<div class="doc-item">';
+    html += '<span class="doc-icon">&#128196;</span>';
+    html += '<span class="doc-name">' + esc(s.title || k) + '</span>';
+    html += '<span class="doc-size">' + sizeStr + ' תווים</span>';
+    html += '<div class="doc-actions">';
+    html += '<button class="btn btn-save" style="padding:6px 12px;font-size:12px;" id="dbtn-' + k + '" onclick="toggleDocPreview(' + "'" + k + "'" + ')">צפייה</button>';
+    html += '<button class="btn btn-danger" onclick="deleteSection(' + "'" + k + "'" + ')">מחק</button>';
+    html += '</div></div>';
+    html += '<div class="doc-preview" id="dp-' + k + '">' + esc(s.body || '') + '</div>';
+    html += '</div>';
+    return html;
+}
+
+function toggleDocPreview(key) {
+    var el = document.getElementById('dp-' + key);
+    var btn = document.getElementById('dbtn-' + key);
+    if (el.style.display === 'block') {
+        el.style.display = 'none';
+        btn.textContent = 'צפייה';
+    } else {
+        el.style.display = 'block';
+        btn.textContent = 'הסתר';
+    }
 }
 
 // ── Helpers ──
