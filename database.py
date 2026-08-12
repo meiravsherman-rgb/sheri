@@ -210,7 +210,14 @@ def build_knowledge_base() -> str:
     parts = []
 
     for s in get_all_sections():
-        parts.append(f"## {s['title']}\n\n{s['body']}")
+        key = s.get("section_key", "")
+        body = (s.get("body") or "").strip()
+        # Skip guide entries with no content (questionnaire answers belong in rules)
+        if key.startswith("guide_") and not body:
+            continue
+        if not body:
+            continue
+        parts.append(f"## {s['title']}\n\n{body}")
 
     courses = [c for c in get_all_courses() if c.get("is_active")]
     if courses:
@@ -231,12 +238,50 @@ def build_knowledge_base() -> str:
 
 def build_rules_text() -> str:
     """Build behavioral rules text from DB."""
-    rules = [r for r in get_all_rules() if r.get("is_active")]
-    if not rules:
+    all_rules = [r for r in get_all_rules() if r.get("is_active")]
+    if not all_rules:
         return ""
+
+    # Separate actual rules from questionnaire answers
+    behavior_rules = []
+    guide_answers = []
+    for r in all_rules:
+        key = r.get("rule_key", "")
+        title = (r.get("title") or "").strip()
+        body = (r.get("body") or "").strip()
+        # Skip entries with no meaningful content
+        if not title and not body:
+            continue
+        if key.startswith("guide_"):
+            if body:  # Only include guide answers that have actual content
+                guide_answers.append(r)
+        elif key.startswith("feedback_"):
+            if body:  # Only include feedback with content
+                behavior_rules.append(r)
+        else:
+            behavior_rules.append(r)
+
     lines = []
-    for i, r in enumerate(rules, 1):
-        lines.append(f"{i}. **{r['title']}:** {r['body']}")
+    # Behavioral rules as numbered list
+    for i, r in enumerate(behavior_rules, 1):
+        title = (r.get("title") or "").strip()
+        body = (r.get("body") or "").strip()
+        if title and body:
+            lines.append(f"{i}. **{title}:** {body}")
+        elif body:
+            lines.append(f"{i}. {body}")
+
+    # Guide answers as preferences section
+    if guide_answers:
+        lines.append("\n## העדפות מירב (מתוך שאלון דיוק)")
+        for r in guide_answers:
+            title = (r.get("title") or "").strip()
+            body = (r.get("body") or "").strip()
+            if title and body:
+                lines.append(f"- **{title}** → {body}")
+            elif body:
+                lines.append(f"- {body}")
+
     return "\n".join(lines)
 
 
