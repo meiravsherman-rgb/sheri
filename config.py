@@ -19,7 +19,7 @@ WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 
 # ── LLM ────────────────────────────────────────────────────────────
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "anthropic")
-LLM_MODEL = os.getenv("LLM_MODEL", "claude-haiku-4-5-20251001")
+LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # ── Supabase ───────────────────────────────────────────────────────
