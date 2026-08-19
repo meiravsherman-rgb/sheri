@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>תוכנית משפך שיווקי - שיטת שרמן</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f8f6f3;
+    color: #2d2d2d;
+    line-height: 1.7;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #d4a5a5, #e8c5c5);
+    padding: 40px 36px;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-size: 28px;
+    color: #4a2c2c;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    font-size: 16px;
+    color: #6b4444;
+  }
+
+  .content {
+    padding: 36px;
+  }
+
+  h2 {
+    font-size: 22px;
+    color: #4a2c2c;
+    margin: 32px 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8c5c5;
+  }
+
+  h2:first-child { margin-top: 0; }
+
+  h3 {
+    font-size: 18px;
+    color: #6b4444;
+    margin: 20px 0 10px 0;
+  }
+
+  p, li {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  ul, ol {
+    padding-right: 24px;
+    margin-bottom: 16px;
+  }
+
+  li { margin-bottom: 6px; }
+
+  .highlight-box {
+    background: #fef7f0;
+    border-right: 4px solid #d4a5a5;
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+  }
+
+  .before-after {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+
+  .before-box, .after-box {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .before-box {
+    background: #fff0f0;
+    border: 1px solid #e8b4b4;
+  }
+
+  .after-box {
+    background: #f0fff4;
+    border: 1px solid #b4e8c0;
+  }
+
+  .before-box h3 { color: #c44; }
+  .after-box h3 { color: #2a8a4a; }
+
+  .journey-step {
+    display: flex;
+    align-items: flex-start;
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .step-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-left: 16px;
+  }
+
+  .step-content {
+    flex: 1;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .step-content h4 {
+    font-size: 16px;
+    color: #4a2c2c;
+    margin-bottom: 4px;
+  }
+
+  .step-content p {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .step-label {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    margin-top: 4px;
+  }
+
+  .label-auto { background: #e8f5e9; color: #2e7d32; }
+  .label-merav { background: #fff3e0; color: #e65100; }
+  .label-new { background: #e3f2fd; color: #1565c0; }
+
+  .question-box {
+    background: #fff8e1;
+    border: 2px solid #ffb74d;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 12px 0;
+  }
+
+  .question-box .q-header {
+    font-weight: bold;
+    color: #e65100;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+
+  .question-box p {
+    color: #5d4037;
+    font-size: 14px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .stat-card {
+    text-align: center;
+    padding: 16px;
+    border-radius: 12px;
+    background: #fef7f0;
+  }
+
+  .stat-card .number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #4a2c2c;
+  }
+
+  .stat-card .label {
+    font-size: 13px;
+    color: #888;
+  }
+
+  .alert-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+    margin: 12px 0;
+  }
+
+  .alert-table td {
+    padding: 10px 14px;
+    background: #fafafa;
+    font-size: 14px;
+  }
+
+  .alert-table td:first-child {
+    border-radius: 0 8px 8px 0;
+    font-size: 20px;
+    width: 40px;
+    text-align: center;
+  }
+
+  .alert-table td:last-child {
+    border-radius: 8px 0 0 8px;
+    color: #888;
+    font-size: 13px;
+  }
+
+  .template-preview {
+    background: #e8f5e9;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 8px 0;
+    font-size: 14px;
+    color: #333;
+    position: relative;
+  }
+
+  .template-preview::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    right: -8px;
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-left: 8px solid #e8f5e9;
+  }
+
+  .template-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .template-btn {
+    padding: 6px 14px;
+    border: 1px solid #a5d6a7;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #2e7d32;
+    background: white;
+  }
+
+  .phase-box {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 12px 0;
+  }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .phase-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #d4a5a5;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+  }
+
+  .divider {
+    height: 1px;
+    background: #eee;
+    margin: 32px 0;
+  }
+
+  .footer {
+    background: #f8f6f3;
+    padding: 24px 36px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+  }
+
+  .emoji-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .emoji-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .emoji-list li:last-child { border-bottom: none; }
+
+  @media (max-width: 600px) {
+    .before-after { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .content { padding: 20px; }
+    .header { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>תוכנית שדרוג המשפך השיווקי</h1>
+    <p>שיטת שרמן — מירב שרמן</p>
+  </div>
+
+  <div class="content">
+
+    <!-- ========== מה יש היום ========== -->
+    <h2>מה יש היום</h2>
+    <p>הבוט שרי עובד ומשרת לקוחות — עונה על שאלות, מסביר על הקורסים, ושולח קישורי הרשמה. <strong>זה עובד טוב!</strong></p>
+    <p>אבל מה קורה אחרי ששלחנו קישור?</p>
+
+    <div class="before-after">
+      <div class="before-box">
+        <h3>המצב היום</h3>
+        <ul>
+          <li>לקוחה מתעניינת ← מקבלת קישור ← <strong>שקט</strong></li>
+          <li>אם לא קנתה — אף אחד לא חוזר אליה</li>
+          <li>אם כן קנתה — מירב צריכה לגלות את זה לבד</li>
+          <li>אין מעקב שיטתי אחרי לידים</li>
+          <li>מירב לא יודעת בזמן אמת מה קורה</li>
+        </ul>
+      </div>
+      <div class="after-box">
+        <h3>מה שמתוכנן</h3>
+        <ul>
+          <li>כל ליד מקבל מעקב אוטומטי עד שקונה</li>
+          <li>רכישה מזוהה אוטומטית ← ברכה ללקוחה + עדכון למירב</li>
+          <li>ליד שנשר ← תזכורת חמה אוטומטית</li>
+          <li>מירב מקבלת התראות מיידיות על אירועים חשובים</li>
+          <li>דוח שבועי — מה עבד, מה לא, על מי להשקיע</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ========== המסע של הלקוחה ========== -->
+    <h2>המסע של הלקוחה — צעד אחר צעד</h2>
+    <p>ככה ייראה המסע של כל לקוחה שפונה, מהרגע שהיא כותבת ועד שהיא ממליצה לחברות:</p>
+
+    <!-- שלב 1 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #e3f2fd;">1</div>
+      <div class="step-content">
+        <h4>לקוחה חדשה פונה לראשונה</h4>
+        <p>הלקוחה כותבת לשרי. שרי עונה בחמימות, מסבירה על שיטת שרמן, עונה על שאלות.</p>
+        <p><strong>מה חדש:</strong> בסוף השיחה, שרי שואלת בצורה טבעית: <em>"אם תרצי, אוכל לשלוח לך מדי פעם טיפים ועדכונים על בריאות נשית משיטת שרמן. מתאים לך?"</em></p>
+        <p>אם הלקוחה מסכימה — ההסכמה נשמרת. זה מאפשר לנו לשלוח לה הודעות מעקב בהמשך.</p>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה למירב:</div>
+      <p>האם את רוצה שהבוט ישאל את זה בכל שיחה ראשונה, או רק כשהלקוחה מראה עניין בקורס ספציפי?</p>
+    </div>
+
+    <!-- שלב 2 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #fff3e0;">2</div>
+      <div class="step-content">
+        <h4>הלקוחה מתעניינת בקורס</h4>
+        <p>הלקוחה שואלת על קורס ספציפי, על המחיר, על מה מתאים לה. שרי עונה ושולחת קישור להרשמה.</p>
+        <p><strong>מה חדש:</strong></p>
+        <ul>
+          <li>מירב מקבלת הודעה ב-WhatsApp: <em>"ליד חם! [שם] מעוניינת ב[קורס]. שלחתי לה קישור."</em></li>
+          <li>ה-CRM מתעדכן אוטומטית: סטטוס ← "קיבלה קישור"</li>
+        </ul>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <!-- שלב 3 - הוסר: ה-nudge אחרי 30 דקות נמחק כי הוא עלול להרגיש דוחף מדי -->
+
+    <!-- שלב 4 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #f3e5f5;">3</div>
+      <div class="step-content">
+        <h4>24 שעות עברו — עדיין לא קנתה</h4>
+        <p>אם הלקוחה הסכימה לקבל הודעות (שלב 1), שרי שולחת הודעת מעקב:</p>
+        <div class="template-preview">
+          שלום [שם], כאן שרי משיטת שרמן<br>
+          שמתי לב שהתעניינת ב[שם הקורס]. יש שאלות? אשמח לעזור!
+          <div class="template-buttons">
+            <span class="template-btn">יש לי שאלה</span>
+            <span class="template-btn">רוצה להירשם</span>
+          </div>
+        </div>
+        <p>אם הלקוחה לוחצת על כפתור — חוזרת לשיחה עם שרי.</p>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <!-- שלב 4 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #e8eaf6;">4</div>
+      <div class="step-content">
+        <h4>3 ימים עברו — עדיין לא קנתה <span style="font-size: 12px; color: #e65100;">(שלב עתידי)</span></h4>
+        <p>שרי שולחת הודעה עם "הוכחה חברתית" — סיפורי הצלחה של נשים אחרות. <strong>שלב זה לא יהיה פעיל בהשקה</strong> — נוסיף אותו רק אחרי שנראה ש-Quality Rating ירוק ושלקוחות מגיבות טוב להודעות:</p>
+        <div class="template-preview">
+          היי [שם], רציתי לשתף שנשים רבות שהתחילו עם [שם הקורס] מספרות על שינוי משמעותי כבר בשבועות הראשונים.<br>
+          ההרשמה עדיין פתוחה — יש שאלות? אני כאן!
+          <div class="template-buttons">
+            <span class="template-btn">רוצה לשמוע עוד</span>
+            <span class="template-btn">רוצה להירשם</span>
+          </div>
+        </div>
+        <p><strong>בנוסף:</strong> מירב מקבלת התראה: <em>"[שם] קיבלה קישור ל[קורס] לפני 3 ימים ולא רכשה"</em> — מירב יכולה להחליט אם להתקשר בעצמה.</p>
+        <span class="step-label label-new">שלב עתידי — לא בהשקה</span>
+      </div>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה למירב:</div>
+      <p>האם יש לך סיפורי הצלחה / עדויות מלקוחות שאפשר לשלב בהודעות? (לא חייב עכשיו — אפשר להוסיף בהמשך)</p>
+    </div>
+
+    <!-- שלב 5 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #e8f5e9;">5</div>
+      <div class="step-content">
+        <h4>הלקוחה רכשה!</h4>
+        <p>ברגע שהתשלום עובר ב-Cardcom, קורים כמה דברים <strong>אוטומטית</strong>:</p>
+        <ul>
+          <li>הלקוחה מקבלת הודעת ברכה ב-WhatsApp: <em>"מזל טוב! הרכישה שלך ל[קורס] בשיטת שרמן אושרה. מירב תיצור איתך קשר בקרוב."</em></li>
+          <li>מירב מקבלת התראה: <em>"רכישה! [שם] רכשה [קורס] ב-[סכום]₪"</em></li>
+          <li>ה-CRM מתעדכן: סטטוס ← "נרשמה", פרטי הרכישה נשמרים</li>
+          <li>רצף ה-follow-up נעצר מיידית (לא שולחים יותר תזכורות)</li>
+        </ul>
+        <span class="step-label label-auto">אוטומטי לגמרי</span>
+      </div>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה למירב:</div>
+      <p>ה-webhook של Cardcom כבר מחובר — לאן הוא שולח היום את ההודעות? אנחנו צריכים להפנות אותו גם לשרי כדי שהמערכת תזהה רכישות אוטומטית. מה הפרטים של ה-webhook (איזה שדות הוא שולח)?</p>
+    </div>
+
+    <!-- שלב 6 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #fff9c4;">6</div>
+      <div class="step-content">
+        <h4>שבוע אחרי הרכישה — בדיקת שביעות רצון</h4>
+        <p>שרי שולחת הודעה חמה:</p>
+        <div class="template-preview">
+          היי [שם], איך הולך ב[שם הקורס]?<br>
+          אשמח לשמוע! אם יש שאלות — אני כאן.
+          <div class="template-buttons">
+            <span class="template-btn">הכל מעולה!</span>
+            <span class="template-btn">יש לי שאלה</span>
+          </div>
+        </div>
+        <p>אם הלקוחה לוחצת "יש לי שאלה" — חוזרת לשיחה עם שרי. אם "הכל מעולה" — אפשר לבקש המלצה בהמשך.</p>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <!-- שלב 7 -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #f1f8e9;">7</div>
+      <div class="step-content">
+        <h4>המלצות והפניות</h4>
+        <p>אחרי תגובה חיובית (שלב 7), אפשר לבקש מהלקוחה:</p>
+        <ul>
+          <li>להמליץ לחברה ("את מכירה מישהי שיכולה להרוויח מזה?")</li>
+          <li>להציע קורס נוסף שמתאים לה</li>
+        </ul>
+        <p>כל זה יבוא בהמשך — אחרי שהשלבים הקודמים עובדים.</p>
+        <span class="step-label label-new">שלב עתידי</span>
+      </div>
+    </div>
+
+    <!-- שלב 8 - ליד קר -->
+    <div class="journey-step">
+      <div class="step-icon" style="background: #eceff1;">8</div>
+      <div class="step-content">
+        <h4>14 ימים — ליד שלא קנה (ניסיון אחרון)</h4>
+        <p>אם עברו שבועיים ולקוחה לא הגיבה ולא קנתה — פנייה אחרונה:</p>
+        <div class="template-preview">
+          היי [שם], כאן שרי משיטת שרמן<br>
+          עברו כמה ימים מאז שדיברנו. רציתי לוודא שקיבלת את כל המידע.<br>
+          יש משהו שאוכל לעזור בו?
+          <div class="template-buttons">
+            <span class="template-btn">כן, אשמח למידע</span>
+            <span class="template-btn">לא כרגע, תודה</span>
+          </div>
+        </div>
+        <p><strong>"לא כרגע, תודה"</strong> — מפסיקים לשלוח הודעות מעקב, <strong>אבל הלקוחה נשארת ב-CRM עם הסטטוס שלה</strong> (מתעניינת / קיבלה קישור). היא לא "לא רלוונטי" — פשוט לא רוצה עדכונים עכשיו. אם תפנה בעצמה בעתיד — שרי כאן.</p>
+        <p><strong>חשוב:</strong> מקסימום 2 הודעות שיווקיות בלבד (24h + 14d). לא מציקים.</p>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ========== מה מירב מקבלת ========== -->
+    <h2>מה מירב מקבלת</h2>
+
+    <h3>התראות מיידיות ב-WhatsApp</h3>
+    <p>מירב תקבל הודעות ישירות למספר הטלפון שלה על אירועים חשובים:</p>
+
+    <table class="alert-table">
+      <tr>
+        <td>&#128293;</td>
+        <td><strong>ליד חם</strong> — לקוחה מעוניינת בקורס, קיבלה קישור</td>
+        <td>מיידי</td>
+      </tr>
+      <tr>
+        <td>&#127881;</td>
+        <td><strong>רכישה חדשה</strong> — לקוחה רכשה קורס (סכום + פרטים)</td>
+        <td>מיידי</td>
+      </tr>
+      <tr>
+        <td>&#9888;&#65039;</td>
+        <td><strong>ליד שנשר</strong> — קיבלה קישור לפני 3 ימים, לא קנתה</td>
+        <td>אחרי 3 ימים</td>
+      </tr>
+      <tr>
+        <td>&#128260;</td>
+        <td><strong>ליד חוזר</strong> — לקוחה שכבר היתה חזרה אחרי ימים</td>
+        <td>מיידי</td>
+      </tr>
+      <tr>
+        <td>&#128202;</td>
+        <td><strong>דוח שבועי</strong> — כמה לידים, כמה רכישות, כמה ממתינים</td>
+        <td>יום ראשון בבוקר</td>
+      </tr>
+    </table>
+
+    <div class="question-box">
+      <div class="q-header">שאלה למירב:</div>
+      <p>המספר שאליו תישלחנה ההתראות הוא 050-318-9636 — זה נכון? או שיש מספר אחר?</p>
+    </div>
+
+    <h3>CRM מתעדכן אוטומטית</h3>
+    <p>כל שלב במסע הלקוחה מתעדכן ב-CRM בלי שמירב צריכה לעשות משהו:</p>
+
+    <ul class="emoji-list">
+      <li><strong>חדשה</strong> — הודעה ראשונה (אוטומטי)</li>
+      <li><strong>מתעניינת</strong> — שאלה על קורס/מחיר (אוטומטי)</li>
+      <li><strong>קיבלה קישור</strong> — שרי שלחה קישור רכישה (אוטומטי)</li>
+      <li><strong>נרשמה</strong> — תשלום ב-Cardcom עבר (אוטומטי!)</li>
+      <li><strong>לקוחה פעילה</strong> — בתוך קורס (מירב מעדכנת ידנית)</li>
+      <li><strong>סיימה קורס</strong> — אחרי קורס (מירב מעדכנת ידנית)</li>
+      <li><strong>ממתינה למירב</strong> — שרי העבירה למירב (אוטומטי)</li>
+      <li><strong>טופלה ידנית</strong> — מירב פנתה ללקוחה בעצמה (מירב מסמנת)</li>
+      <li><strong>לא רלוונטי</strong> — לא קהל יעד / ספאם (מירב מעדכנת ידנית בלבד)</li>
+    </ul>
+    <p style="font-size: 13px; color: #888;"><strong>שימי לב:</strong> "לא רלוונטי" מוגדר רק על ידי מירב ידנית. לקוחה שביקשה לא לקבל עדכונים — פשוט מסומנת ככזו, אבל הסטטוס שלה לא משתנה.</p>
+
+    <h3>ניקוד לידים — לדעת על מי להשקיע</h3>
+    <p>כל לקוחה מקבלת ניקוד אוטומטי לפי ההתנהגות שלה. ככל שהניקוד גבוה יותר — הסיכוי שתקנה גבוה יותר:</p>
+    <div class="highlight-box">
+      <ul>
+        <li>שאלה על קורס = +10 נקודות</li>
+        <li>שאלה על מחיר = +15 נקודות</li>
+        <li>קיבלה קישור רכישה = +20 נקודות</li>
+        <li>ביקשה לדבר עם מירב = +25 נקודות</li>
+        <li>ענתה ל-follow-up = +15 נקודות</li>
+      </ul>
+      <p>ב-CRM, הלידים ממוינים לפי ניקוד — מירב רואה מיד מי הכי "חמה".</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ========== הגנות ========== -->
+    <h2>הגנות מפני הצקה — מגנים על הלקוחה ועל מירב</h2>
+
+    <div class="highlight-box" style="background: #fce4ec; border-right-color: #e57373;">
+      <h3 style="color: #c62828;">עיקרון מנחה: פחות זה יותר</h3>
+      <p>WhatsApp הוא ערוץ אישי מאוד. הודעות שיווקיות מרגישות כמו פלישה אם יש יותר מדי. Meta עוקבת ומענישה עסקים שמציקים.</p>
+    </div>
+
+    <h3>כמה הודעות מעקב לקוחה מקבלת?</h3>
+    <table class="alert-table">
+      <tr>
+        <td style="font-weight: bold; color: #4caf50;">&#10003;</td>
+        <td><strong>הודעה 1</strong> — 24 שעות אחרי קישור: "יש שאלות?"</td>
+        <td>ערך: עזרה</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; color: #4caf50;">&#10003;</td>
+        <td><strong>הודעה 2</strong> — 14 ימים: "עברו ימים, צריכה עוד מידע?"</td>
+        <td>ערך: מעקב</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; color: #c62828;">&#10007;</td>
+        <td><del>הודעה אחרי 3 ימים</del> — הורדנו. 3 הודעות ב-14 יום זה יותר מדי</td>
+        <td>מוגזם</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; color: #c62828;">&#10007;</td>
+        <td><del>Nudge אחרי 30 דקות</del> — הורדנו. מרגיש לחץ מיותר</td>
+        <td>דוחף מדי</td>
+      </tr>
+    </table>
+
+    <p><strong>סך הכל:</strong> מקסימום <strong>2 הודעות שיווקיות</strong> לכל ליד (24h + 14d). בנוסף, הודעת אישור רכישה (אם קנתה) ובדיקת שביעות רצון (שבוע אחרי רכישה) — אלה הודעות שירות, לא שיווק.</p>
+
+    <h3>חשוב — "לא רוצה עדכונים" ≠ "לא רלוונטית"</h3>
+    <div class="highlight-box">
+      <p>לקוחה שאומרת "לא כרגע" או "הסר" — <strong>לא הופכת ל"לא רלוונטי" ב-CRM</strong>. היא נשארת עם הסטטוס שלה (מתעניינת, קיבלה קישור, וכו').</p>
+      <p>אם היא תחזור ותכתוב לשרי בעצמה — שרי תענה לה בשמחה כרגיל.</p>
+      <p>הסטטוס "לא רלוונטי" שמור רק למקרים שבהם <strong>מירב מחליטה ידנית</strong> שהלקוחה לא מתאימה (ספאם, טעות, לא קהל יעד).</p>
+    </div>
+
+    <h3>איפה מירב רואה מי רוצה עדכונים ומי לא?</h3>
+    <div class="highlight-box" style="background: #e3f2fd; border-right-color: #64b5f6;">
+      <p>ב-CRM, בכרטיס של כל לקוחה, יהיו <strong>שני דברים נפרדים</strong>:</p>
+
+      <div style="display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px; background: white; border-radius: 8px; padding: 14px; border: 1px solid #ddd;">
+          <div style="font-weight: bold; color: #4a2c2c; margin-bottom: 6px;">סטטוס במשפך</div>
+          <div style="font-size: 14px; color: #666;">איפה היא בתהליך:</div>
+          <div style="margin-top: 8px;">
+            <span style="background: #e8f5e9; padding: 3px 10px; border-radius: 10px; font-size: 13px;">מתעניינת</span>
+            <span style="background: #fff3e0; padding: 3px 10px; border-radius: 10px; font-size: 13px;">קיבלה קישור</span>
+            <span style="background: #e3f2fd; padding: 3px 10px; border-radius: 10px; font-size: 13px;">נרשמה</span>
+          </div>
+          <div style="font-size: 12px; color: #999; margin-top: 8px;">לא משתנה כשלקוחה מסרבת לעדכונים</div>
+        </div>
+
+        <div style="flex: 1; min-width: 200px; background: white; border-radius: 8px; padding: 14px; border: 1px solid #ddd;">
+          <div style="font-weight: bold; color: #4a2c2c; margin-bottom: 6px;">הסכמה לדיוור</div>
+          <div style="font-size: 14px; color: #666;">האם מותר לשלוח לה הודעות:</div>
+          <div style="margin-top: 8px;">
+            <span style="background: #e8f5e9; padding: 3px 10px; border-radius: 10px; font-size: 13px;">&#10003; מאושר</span>
+            &nbsp;או&nbsp;
+            <span style="background: #fce4ec; padding: 3px 10px; border-radius: 10px; font-size: 13px;">&#10007; לא מאושר</span>
+          </div>
+          <div style="font-size: 12px; color: #999; margin-top: 8px;">זה מה שמשתנה כשלקוחה אומרת "הסר"</div>
+        </div>
+      </div>
+
+      <p style="font-size: 14px;"><strong>דוגמה:</strong> לקוחה ששאלה על הקורס הדיגיטלי, קיבלה קישור, ואמרה "הסר" — ב-CRM שלה ייראה:</p>
+      <div style="background: white; border-radius: 8px; padding: 12px 16px; border: 1px solid #ddd; margin-top: 8px; font-size: 14px;">
+        <span style="color: #888;">סטטוס:</span> <span style="background: #fff3e0; padding: 2px 8px; border-radius: 8px; font-size: 13px;">קיבלה קישור</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color: #888;">דיוור:</span> <span style="background: #fce4ec; padding: 2px 8px; border-radius: 8px; font-size: 13px;">&#10007; לא מאושר</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color: #888;">קורס:</span> קורס דיגיטלי
+      </div>
+      <p style="font-size: 13px; color: #666; margin-top: 8px;">מירב רואה בבירור: הלקוחה עדיין מתעניינת, אבל לא רוצה עדכונים. אם מירב רוצה — היא יכולה להתקשר אליה בעצמה.</p>
+    </div>
+
+    <h3>מה עוד מגן על הלקוחה ועל מירב</h3>
+    <ul>
+      <li><strong>שעות שליחה:</strong> הודעות מעקב נשלחות רק בשעות סבירות (בהתאם למה שמירב תגדיר — למשל 9:00-20:00)</li>
+      <li><strong>לא שולחים כפול:</strong> אם לקוחה כבר ענתה — לא שולחים לה follow-up. אם קנתה — כל המעקבים נעצרים מיידית</li>
+      <li><strong>לקוחה שחסמה את המספר:</strong> ה-API מדווח על זה. נסמן ב-CRM ולא ננסה שוב</li>
+      <li><strong>Quality Rating של Meta:</strong> אם Meta נותנת ציון צהוב/אדום — מפחיתים שליחות אוטומטית עד שהציון חוזר לירוק</li>
+      <li><strong>מירב פונה ידנית:</strong> אם מירב התקשרה ללקוחה או שלחה לה הודעה בעצמה — אפשר לסמן ב-CRM "טופלה ידנית" וה-follow-up האוטומטי ייעצר</li>
+    </ul>
+
+    <div class="divider"></div>
+
+    <!-- ========== תרחישים נוספים ========== -->
+    <h2>תרחישים נוספים שחשבנו עליהם</h2>
+
+    <div class="journey-step">
+      <div class="step-icon" style="background: #e8eaf6;">&#8634;</div>
+      <div class="step-content">
+        <h4>לקוחה חוזרת שכבר קנתה בעבר</h4>
+        <p>אם לקוחה שכבר רכשה קורס חוזרת וכותבת לשרי — שרי מכירה אותה (הזיכרון שמור ב-CRM). שרי לא מתייחסת אליה כליד חדש, אלא אומרת <em>"שמחה לראות אותך שוב!"</em> ומציעה קורסים שעדיין לא רכשה.</p>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <div class="journey-step">
+      <div class="step-icon" style="background: #fff3e0;">&#9993;</div>
+      <div class="step-content">
+        <h4>לקוחה שהתחילה שיחה אבל לא הגיעה לשלב הקישור</h4>
+        <p>לקוחה ששאלה שאלות כלליות על השיטה אבל לא שאלה על קורס ספציפי — <strong>לא מקבלת הודעות מעקב</strong>. ה-follow-up מופעל רק אחרי שנשלח קישור רכישה. בשביל לקוחות כאלה, הפתרון הוא רב מסר (אם הסכימו לעדכונים) — טיפים כלליים על בריאות נשית שמחממים אותן לאט.</p>
+        <span class="step-label label-new">דרך רב מסר</span>
+      </div>
+    </div>
+
+    <div class="journey-step">
+      <div class="step-icon" style="background: #fce4ec;">&#9742;</div>
+      <div class="step-content">
+        <h4>מירב מטפלת בלקוחה ידנית</h4>
+        <p>אם מירב התקשרה ללקוחה, שלחה לה הודעה בעצמה, או פגשה אותה — מירב יכולה לסמן ב-CRM <strong>"טופלה ידנית"</strong>. ברגע שזה מסומן — ה-follow-up האוטומטי נעצר כדי שהלקוחה לא תקבל הודעות סותרות.</p>
+        <span class="step-label label-merav">מירב מעדכנת</span>
+      </div>
+    </div>
+
+    <div class="journey-step">
+      <div class="step-icon" style="background: #e8f5e9;">&#128176;</div>
+      <div class="step-content">
+        <h4>לקוחה רכשה בערוץ אחר (לא דרך הבוט)</h4>
+        <p>אם לקוחה רכשה ישירות דרך האתר או בטלפון עם מירב — Cardcom ישלח webhook בכל מקרה (כי התשלום עובר דרך Cardcom). אם מספר הטלפון תואם — ה-CRM יזהה את הלקוחה ויעדכן אוטומטית, גם אם היא מעולם לא דיברה עם שרי.</p>
+        <span class="step-label label-auto">אוטומטי</span>
+      </div>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה למירב:</div>
+      <p>האם יש מקרים שלקוחות קונות בלי Cardcom? (למשל: העברה בנקאית, מזומן, ביט?) אם כן — מירב תצטרך לעדכן את ה-CRM ידנית במקרים כאלה.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ========== הסכמה ופרטיות ========== -->
+    <h2>הסכמה, פרטיות וחוק</h2>
+    <p>הכל נעשה לפי החוק הישראלי ולפי כללי WhatsApp (Meta):</p>
+
+    <ul>
+      <li><strong>הסכמה מפורשת:</strong> לפני שליחת הודעות שיווקיות, הלקוחה נשאלת ומסכימה. ההסכמה נשמרת עם תאריך ושעה.</li>
+      <li><strong>ביטול בקלות:</strong> כל הודעה כוללת "לביטול שלחי: הסר". ברגע שהלקוחה שולחת "הסר" — מפסיקים מיידית.</li>
+      <li><strong>שם העסק מוזכר תמיד:</strong> כל הודעה כוללת "שיטת שרמן" — חובה של WhatsApp.</li>
+      <li><strong>מקסימום 3 הודעות מעקב:</strong> לא מציקים. אם לא ענתה — מכבדים.</li>
+      <li><strong>הודעות מאושרות מראש:</strong> כל הודעות המעקב צריכות אישור של WhatsApp (Meta) לפני שימוש.</li>
+    </ul>
+
+    <div class="divider"></div>
+
+    <!-- ========== רב מסר ========== -->
+    <h2>רב מסר — שילוב עם המערכת</h2>
+
+    <div class="question-box">
+      <div class="q-header">שאלות למירב בנושא רב מסר:</div>
+      <p><strong>1.</strong> מה את עושה היום עם רב מסר? (דיוור במייל? SMS? שניהם?)</p>
+      <p><strong>2.</strong> האם הרשימות ברב מסר כוללות מספרי טלפון של הלקוחות? (זה מאפשר לחבר בין הרשימה לבין ה-CRM)</p>
+      <p><strong>3.</strong> האם את שולחת קמפיינים שיווקיים דרך רב מסר? (אם כן — איזה סוג?)</p>
+      <p><strong>4.</strong> האם את רוצה שלידים שמגיעים מהבוט ייכנסו אוטומטית גם לרשימות של רב מסר?</p>
+      <p><strong>5.</strong> האם את רוצה שלקוחה שרכשה דרך הבוט תקבל גם מיילים דרך רב מסר (למשל: סדרת מיילים של הכנה לקורס)?</p>
+    </div>
+
+    <p><strong>אפשרויות שילוב:</strong></p>
+    <ul>
+      <li>ליד חדש בבוט ← נכנס אוטומטית לרשימת דיוור ברב מסר</li>
+      <li>לקוחה שרכשה ← מועברת לרשימה ייעודית ברב מסר (מקבלת תכנים אחרים)</li>
+      <li>לקוחה שביטלה דיוור (opt-out) ← מוסרת גם מרב מסר</li>
+      <li>התיאום בין WhatsApp לרב מסר — כדי שלקוחה לא תקבל את אותו מסר בשני ערוצים</li>
+    </ul>
+
+    <div class="divider"></div>
+
+    <!-- ========== שלבי עבודה ========== -->
+    <h2>שלבי עבודה</h2>
+
+    <div class="phase-box">
+      <div class="phase-header">
+        <div class="phase-num">1</div>
+        <h3 style="margin:0">תשתית</h3>
+      </div>
+      <p><strong>מה נבנה:</strong> הסכמה (opt-in), הודעות מעקב מאושרות (templates), חיבור Cardcom</p>
+      <p><strong>מה מירב מרגישה:</strong> לראשונה — מירב תדע על כל רכישה ברגע שהיא קורה. לקוחות שרכשו מקבלות הודעת ברכה אוטומטית.</p>
+    </div>
+
+    <div class="phase-box">
+      <div class="phase-header">
+        <div class="phase-num">2</div>
+        <h3 style="margin:0">אוטומציה</h3>
+      </div>
+      <p><strong>מה נבנה:</strong> מעקב אוטומטי (follow-up), סטטוסים מפורטים, התראות למירב, ניקוד לידים</p>
+      <p><strong>מה מירב מרגישה:</strong> אפס לידים שנשכחים. כל ליד מקבל מעקב. מירב יודעת על כל אירוע חשוב. הדשבורד מראה תמונה מלאה.</p>
+    </div>
+
+    <div class="phase-box">
+      <div class="phase-header">
+        <div class="phase-num">3</div>
+        <h3 style="margin:0">צמיחה</h3>
+      </div>
+      <p><strong>מה נבנה:</strong> בדיקת שביעות רצון, הצעת קורסים נוספים, בקשת המלצות, שילוב רב מסר</p>
+      <p><strong>מה מירב מרגישה:</strong> לקוחות שקנו ממשיכות להרגיש מלוות. מירב מקבלת המלצות אורגניות. הכנסה מלקוחות קיימות עולה.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ========== שאלות נוספות ========== -->
+    <h2>שאלות נוספות למירב</h2>
+
+    <div class="question-box">
+      <div class="q-header">שאלה 1 — קוד הנחה SHERI:</div>
+      <p>הקוד SHERI שנותן 36% הנחה — עדיין פעיל? כי בשלב 5 (תזכורת אחרי 3 ימים) אנחנו יכולים להציע את הקוד כתמריץ לרכישה.</p>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה 2 — מה קורה אחרי רכישה:</div>
+      <p>כשלקוחה רוכשת קורס — מה הצעד הבא? מירב שולחת מייל? מתקשרת? שולחת לינק לפלטפורמה? (חשוב לדעת כדי שהודעת הברכה תהיה מדויקת)</p>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה 3 — נוסח ההודעות:</div>
+      <p>הטקסטים של ההודעות למעלה הם טיוטות. מירב — בבקשה עברי על כל הודעה (הבועות הירוקות) ותגידי אם הנוסח מתאים או שצריך לשנות. ההודעות צריכות להרגיש כמו "את" ולא כמו בוט.</p>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה 4 — לידים מהאתר:</div>
+      <p>לידים שמגיעים מהאתר (עם שם, מייל וטלפון) — את רוצה שהם ייכנסו אוטומטית ל-CRM של הבוט? ככה אם הם יפנו לבוט אחר כך, שרי כבר תכיר אותם.</p>
+    </div>
+
+    <div class="question-box">
+      <div class="q-header">שאלה 5 — שעות שליחה:</div>
+      <p>באיזה שעות מותר לשלוח הודעות מעקב? (למשל: רק 9:00-20:00? או שאין הגבלה?)</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ========== סיכום ========== -->
+    <h2>סיכום — מה זה נותן</h2>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="number">0</div>
+        <div class="label">לידים שנשכחים</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">100%</div>
+        <div class="label">מעקב אוטומטי</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">24/7</div>
+        <div class="label">מערכת שעובדת</div>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <h3>מבחינת הלקוחה:</h3>
+      <ul>
+        <li>מרגישה שמטפלים בה — לא שכחו אותה</li>
+        <li>מקבלת תזכורות חמות, לא ספאם</li>
+        <li>יכולה לבטל בכל רגע</li>
+        <li>אחרי רכישה — מקבלת ברכה ובדיקה שהכל בסדר</li>
+      </ul>
+    </div>
+
+    <div class="highlight-box">
+      <h3>מבחינת מירב:</h3>
+      <ul>
+        <li>יודעת על כל רכישה ברגע שהיא קורה</li>
+        <li>יודעת על כל ליד חם שצריך תשומת לב</li>
+        <li>לא צריכה לזכור לחזור ללקוחות — המערכת עושה את זה</li>
+        <li>רואה בדיוק איפה כל לקוחה נמצאת במשפך</li>
+        <li>מקבלת דוח שבועי — בלי לפתוח CRM</li>
+        <li>הכל חוקי ומסודר — ציות ל-WhatsApp ולחוק הישראלי</li>
+      </ul>
+    </div>
+
+  </div>
+
+    <!-- ========== תבניות לאישור מטא ========== -->
+    <h2>תבניות הודעות WhatsApp — לאישור מירב</h2>
+    <p>אלה ההודעות שנגיש לאישור ב-WhatsApp (Meta). כל הודעה צריכה לעבור אישור של Meta לפני שנוכל להשתמש בה. <strong>מירב — בבקשה עברי על כל הודעה ואשרי/תקני את הנוסח.</strong></p>
+    <p style="font-size: 13px; color: #888;">הערה: [שם] ו-[שם הקורס] יוחלפו אוטומטית בשם הלקוחה ובשם הקורס שהתעניינה בו.</p>
+
+    <div class="divider"></div>
+
+    <!-- תבנית 1 -->
+    <div style="margin: 24px 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <span style="background: #d4a5a5; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold;">תבנית 1</span>
+        <span style="font-size: 16px; font-weight: bold; color: #4a2c2c;">מעקב אחרי יום (24 שעות)</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מתי נשלחת: 24 שעות אחרי שהלקוחה קיבלה קישור לרכישה ולא רכשה</p>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מטרה: לבדוק אם יש שאלות, לעודד חזרה לשיחה</p>
+
+      <div style="max-width: 380px; margin: 0 auto;">
+        <div style="background: #dcf8c6; border-radius: 12px 12px 4px 12px; padding: 14px 16px; font-size: 15px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative;">
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px;">שרי - שיטת שרמן</div>
+          שלום <strong>[שם]</strong>, כאן שרי משיטת שרמן 🌸
+          <br><br>
+          שמתי לב שהתעניינת ב<strong>[שם הקורס]</strong>. יש שאלות? אשמח לעזור!
+          <br><br>
+          <span style="font-size: 12px; color: #888;">לביטול הודעות: שלחי "הסר"</span>
+          <div style="text-align: left; font-size: 11px; color: #999; margin-top: 6px;">✓✓ 10:30</div>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">יש לי שאלה</div>
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">רוצה להירשם</div>
+        </div>
+      </div>
+
+      <div class="question-box" style="margin-top: 12px;">
+        <div class="q-header">מירב — מה את חושבת?</div>
+        <p>הנוסח מתאים? רוצה לשנות משהו? שימי לב שההודעה צריכה להרגיש חמה ואישית, לא מכירתית.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- תבנית 2 -->
+    <div style="margin: 24px 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <span style="background: #9e9e9e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold;">תבנית 2</span>
+        <span style="font-size: 16px; font-weight: bold; color: #4a2c2c;">תזכורת אחרי 3 ימים</span>
+        <span style="background: #fff3e0; color: #e65100; padding: 3px 10px; border-radius: 10px; font-size: 12px;">שלב עתידי — לא בהשקה</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מתי נשלחת: 3 ימים אחרי שהלקוחה קיבלה קישור ולא רכשה</p>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מטרה: הוכחה חברתית (סיפורי הצלחה) + תזכורת עדינה</p>
+      <p style="font-size: 13px; color: #e65100; margin-bottom: 8px;"><strong>הערה:</strong> בשלב ראשון לא נפעיל את התבנית הזו — כדי לא להציק. נתחיל עם 2 הודעות בלבד (24h + 14d) ואם נראה שזה עובד טוב ו-Quality Rating ירוק, נשקול להוסיף אותה. בכל מקרה, נגיש אותה מראש לאישור Meta כדי שתהיה מוכנה.</p>
+
+      <div style="max-width: 380px; margin: 0 auto;">
+        <div style="background: #dcf8c6; border-radius: 12px 12px 4px 12px; padding: 14px 16px; font-size: 15px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px;">שרי - שיטת שרמן</div>
+          היי <strong>[שם]</strong> 💕
+          <br><br>
+          רציתי לשתף שנשים רבות שהתחילו עם <strong>[שם הקורס]</strong> מספרות על שינוי משמעותי כבר בשבועות הראשונים.
+          <br><br>
+          ההרשמה עדיין פתוחה — יש שאלות? אני כאן!
+          <br><br>
+          <span style="font-size: 12px; color: #888;">לביטול: "הסר"</span>
+          <div style="text-align: left; font-size: 11px; color: #999; margin-top: 6px;">✓✓ 11:15</div>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">רוצה לשמוע עוד</div>
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">רוצה להירשם</div>
+        </div>
+      </div>
+
+      <div class="question-box" style="margin-top: 12px;">
+        <div class="q-header">מירב — מה את חושבת?</div>
+        <p>האם יש עדויות ספציפיות שאפשר לשלב? למשל: "כבר למעלה מ-500 נשים עברו את הקורס" או ציטוט מלקוחה? זה יהפוך את ההודעה לחזקה הרבה יותר.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- תבנית 3 -->
+    <div style="margin: 24px 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <span style="background: #4caf50; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold;">תבנית 3</span>
+        <span style="font-size: 16px; font-weight: bold; color: #4a2c2c;">אישור רכישה</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מתי נשלחת: מיד אחרי שהתשלום עבר ב-Cardcom</p>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מטרה: אישור + תחושת ביטחון + ציפייה חיובית</p>
+
+      <div style="max-width: 380px; margin: 0 auto;">
+        <div style="background: #dcf8c6; border-radius: 12px 12px 4px 12px; padding: 14px 16px; font-size: 15px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px;">שרי - שיטת שרמן</div>
+          מזל טוב <strong>[שם]</strong>! 🎉
+          <br><br>
+          הרכישה שלך ל<strong>[שם הקורס]</strong> בשיטת שרמן אושרה בהצלחה.
+          <br><br>
+          מירב תיצור איתך קשר בקרוב עם כל הפרטים והגישה לקורס. 🌿
+          <br><br>
+          ברוכה הבאה למשפחת שרמן!
+          <div style="text-align: left; font-size: 11px; color: #999; margin-top: 6px;">✓✓ 14:22</div>
+        </div>
+      </div>
+
+      <div class="question-box" style="margin-top: 12px;">
+        <div class="q-header">מירב — מה את חושבת?</div>
+        <p>1. מה בדיוק קורה אחרי רכישה? את מתקשרת? שולחת מייל? שולחת לינק? צריך להתאים את ההודעה.<br>
+        2. "ברוכה הבאה למשפחת שרמן" — מתאים לסגנון שלך?<br>
+        3. האם הודעה זו צריכה לכלול עוד פרטים (למשל: מה לצפות, לינק לפלטפורמה)?</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- תבנית 4 -->
+    <div style="margin: 24px 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <span style="background: #d4a5a5; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold;">תבנית 4</span>
+        <span style="font-size: 16px; font-weight: bold; color: #4a2c2c;">בדיקת שביעות רצון (שבוע אחרי רכישה)</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מתי נשלחת: 7 ימים אחרי שהלקוחה רכשה קורס</p>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מטרה: לוודא שהכל בסדר, לאפשר שאלות, לזהות לקוחות מרוצות (להמלצות בהמשך)</p>
+
+      <div style="max-width: 380px; margin: 0 auto;">
+        <div style="background: #dcf8c6; border-radius: 12px 12px 4px 12px; padding: 14px 16px; font-size: 15px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px;">שרי - שיטת שרמן</div>
+          היי <strong>[שם]</strong> 🌿
+          <br><br>
+          עבר שבוע מאז שהתחלת את <strong>[שם הקורס]</strong> — איך הולך?
+          <br><br>
+          אשמח לשמוע! אם יש שאלות או משהו שלא ברור — אני כאן בשבילך.
+          <br><br>
+          <span style="font-size: 12px; color: #888;">לביטול: "הסר"</span>
+          <div style="text-align: left; font-size: 11px; color: #999; margin-top: 6px;">✓✓ 09:00</div>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">הכל מעולה!</div>
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">יש לי שאלה</div>
+        </div>
+      </div>
+
+      <div class="question-box" style="margin-top: 12px;">
+        <div class="q-header">מירב — מה את חושבת?</div>
+        <p>הנוסח מתאים? אולי את רוצה להוסיף משפט ספציפי על מה שהלקוחה אמורה לחוות בשבוע הראשון? (למשל: "בשלב הזה את כבר אמורה להרגיש...")</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- תבנית 5 -->
+    <div style="margin: 24px 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <span style="background: #d4a5a5; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold;">תבנית 5</span>
+        <span style="font-size: 16px; font-weight: bold; color: #4a2c2c;">חימום ליד קר (14 ימים)</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מתי נשלחת: 14 ימים אחרי שהלקוחה קיבלה קישור ולא רכשה ולא הגיבה</p>
+      <p style="font-size: 13px; color: #888; margin-bottom: 8px;">מטרה: ניסיון אחרון לפני שמפסיקים לפנות. נותנת ללקוחה את הבחירה.</p>
+
+      <div style="max-width: 380px; margin: 0 auto;">
+        <div style="background: #dcf8c6; border-radius: 12px 12px 4px 12px; padding: 14px 16px; font-size: 15px; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px;">שרי - שיטת שרמן</div>
+          היי <strong>[שם]</strong>, כאן שרי משיטת שרמן 🌸
+          <br><br>
+          עברו כמה ימים מאז שדיברנו. רציתי לוודא שקיבלת את כל המידע שהיית צריכה.
+          <br><br>
+          יש משהו שאוכל לעזור בו?
+          <br><br>
+          <span style="font-size: 12px; color: #888;">לביטול: "הסר"</span>
+          <div style="text-align: left; font-size: 11px; color: #999; margin-top: 6px;">✓✓ 10:00</div>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">כן, אשמח למידע</div>
+          <div style="flex: 1; text-align: center; padding: 10px; background: white; border: 1px solid #25d366; border-radius: 8px; color: #25d366; font-size: 14px; font-weight: 500;">לא כרגע, תודה</div>
+        </div>
+      </div>
+
+      <p style="margin-top: 12px; font-size: 14px; color: #666;">
+        <strong>מה קורה אחרי:</strong><br>
+        "כן, אשמח למידע" → הלקוחה חוזרת לשיחה עם שרי, חלון 24h נפתח מחדש<br>
+        "לא כרגע, תודה" → מפסיקים לשלוח הודעות מעקב. <strong>הלקוחה נשארת ב-CRM עם הסטטוס שלה</strong> — היא לא "לא רלוונטית", פשוט לא רוצה עדכונים עכשיו. אם תפנה בעצמה בעתיד — שרי תענה כרגיל.
+      </p>
+
+      <div class="question-box" style="margin-top: 12px;">
+        <div class="q-header">מירב — מה את חושבת?</div>
+        <p>ההודעה הזו היא הפנייה האחרונה. אחריה — לא פונים יותר (אלא אם הלקוחה תפנה בעצמה). שימי לב שהכפתור אומר "לא כרגע" ולא "לא מעוניינת" — כי אולי בעוד חודש כן. הנוסח מתאים?</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="highlight-box" style="background: #fff3e0; border-right-color: #ffb74d;">
+      <h3 style="color: #e65100;">סיכום — מה צריך מאת מירב</h3>
+      <ol style="padding-right: 20px;">
+        <li><strong>אישור/תיקון</strong> של 5 התבניות למעלה — הנוסח, הטון, הכפתורים</li>
+        <li><strong>סיפורי הצלחה</strong> — אם יש ציטוטים מלקוחות, הם יחזקו את תבנית 2 (עתידית)</li>
+        <li><strong>מה קורה אחרי רכישה</strong> — כדי שנדייק את תבנית 3 (את מתקשרת? שולחת מייל? לינק?)</li>
+        <li><strong>פרטי Cardcom</strong> — לאן ה-webhook שולח היום? מה השדות?</li>
+        <li><strong>קוד SHERI</strong> — עדיין פעיל? (כי אם כן, נוכל להציע אותו בעתיד)</li>
+        <li><strong>רב מסר</strong> — תשובות ל-5 השאלות למעלה (איך משתמשת, מה הרשימות, איך לשלב)</li>
+        <li><strong>שעות שליחה</strong> — באיזה שעות מותר לשלוח הודעות מעקב?</li>
+        <li><strong>מספר טלפון להתראות</strong> — 050-318-9636 נכון?</li>
+        <li><strong>תשלום לא דרך Cardcom</strong> — האם יש לקוחות שמשלמות בהעברה/ביט/מזומן?</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>מסמך הוכן עבור מירב שרמן — שיטת שרמן | אוגוסט 2026</p>
+  </div>
+
+</div>
+
+</body>
+</html>
