@@ -98,7 +98,9 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
     # Prepare tools
     tools = _build_tools_list()
 
-    # Tool-calling loop
+    # Tool-calling loop — collect text from ALL iterations
+    collected_text = []
+
     for _ in range(MAX_TOOL_ITERATIONS):
         kwargs = {
             "model": LLM_MODEL,
@@ -111,20 +113,23 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
 
         response = _client.messages.create(**kwargs)
 
+        # Extract any text blocks (even alongside tool calls)
+        text_blocks = [b.text for b in response.content if b.type == "text" and b.text.strip()]
+        if text_blocks:
+            collected_text.extend(text_blocks)
+
         # Check if the response contains tool use
         tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
 
         if not tool_use_blocks:
-            # No tool calls — extract text reply
-            text_blocks = [b.text for b in response.content if b.type == "text"]
-            reply = "\n".join(text_blocks).strip() if text_blocks else ""
+            # No more tool calls — return collected text
+            reply = "\n".join(collected_text).strip()
             if not reply or len(reply) <= 2:
                 reply = "איך אוכל לעזור לך? 🙂"
             append(chat_id, "assistant", reply)
             return reply
 
         # Process tool calls
-        # Add assistant message with all content blocks
         messages.append({"role": "assistant", "content": response.content})
 
         # Execute each tool and collect results
@@ -139,8 +144,8 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
 
         messages.append({"role": "user", "content": tool_results})
 
-    # If we hit the iteration cap, force a text reply
-    reply = "אני מטפלת בבקשה שלך. אם את צריכה עזרה נוספת, אשמח לעזור 🌸"
+    # If we hit the iteration cap, return whatever text we collected
+    reply = "\n".join(collected_text).strip() if collected_text else "אני מטפלת בבקשה שלך. אם את צריכה עזרה נוספת, אשמח לעזור 🙂"
     append(chat_id, "assistant", reply)
     return reply
 
