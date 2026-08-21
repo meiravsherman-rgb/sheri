@@ -2,6 +2,9 @@
 
 import io
 import os
+import time
+import secrets
+from collections import defaultdict
 from fastapi import APIRouter, Request, Response, Depends, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -18,13 +21,35 @@ router = APIRouter(prefix="/admin")
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "sheri2024")
 
+# ── Rate limiting for login ──────────────────────────────────────
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_MAX_LOGIN_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+# ── Session tokens (not password as cookie) ──────────────────────
+_active_sessions: dict[str, float] = {}  # token -> expiry timestamp
+_SESSION_TTL = 86400  # 24 hours
+
 
 # ── Auth ───────────────────────────────────────────────────────────
 
+def _cleanup_sessions():
+    """Remove expired sessions."""
+    now = time.time()
+    expired = [t for t, exp in _active_sessions.items() if exp < now]
+    for t in expired:
+        del _active_sessions[t]
+
+
 def check_auth(request: Request):
     token = request.cookies.get("admin_token")
-    if token != ADMIN_PASSWORD:
+    if not token:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    _cleanup_sessions()
+    if token not in _active_sessions:
+        # Backwards compatible: also accept raw password for existing sessions
+        if token != ADMIN_PASSWORD:
+            raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 class LoginRequest(BaseModel):
@@ -32,11 +57,28 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/api/login")
-async def login(req: LoginRequest):
+async def login(request: Request, req: LoginRequest):
+    client_ip = request.client.host if request.client else "unknown"
+
+    # Rate limiting: max 5 attempts per 5 minutes per IP
+    now = time.time()
+    _login_attempts[client_ip] = [t for t in _login_attempts[client_ip] if t > now - _LOGIN_WINDOW_SECONDS]
+    if len(_login_attempts[client_ip]) >= _MAX_LOGIN_ATTEMPTS:
+        raise HTTPException(status_code=429, detail="יותר מדי ניסיונות. נסי שוב בעוד 5 דקות.")
+
     if req.password == ADMIN_PASSWORD:
+        session_token = secrets.token_urlsafe(32)
+        _active_sessions[session_token] = now + _SESSION_TTL
+        _cleanup_sessions()
         response = Response(content='{"ok":true}', media_type="application/json")
-        response.set_cookie("admin_token", ADMIN_PASSWORD, httponly=True, max_age=86400 * 30)
+        response.set_cookie(
+            "admin_token", session_token,
+            httponly=True, secure=True, samesite="strict",
+            max_age=_SESSION_TTL,
+        )
         return response
+
+    _login_attempts[client_ip].append(now)
     raise HTTPException(status_code=401, detail="סיסמה שגויה")
 
 
@@ -533,6 +575,13 @@ textarea { min-height: 80px; resize: vertical; }
 <script>
 const API = '/admin/api';
 let currentArea = 'info';
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
 
 // ── Auth ──
 async function doLogin() {

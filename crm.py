@@ -6,7 +6,7 @@ import json
 import os
 from fastapi import APIRouter, Request, Response, Depends, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import (
     get_leads, get_lead, update_lead, create_lead_manual,
     log_lead_event, get_lead_timeline, get_lead_conversations,
@@ -22,6 +22,17 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "sheri2024")
 
 def check_auth(request: Request):
     token = request.cookies.get("admin_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    # Check session tokens from admin module
+    try:
+        from admin import _active_sessions, _cleanup_sessions
+        _cleanup_sessions()
+        if token in _active_sessions:
+            return
+    except ImportError:
+        pass
+    # Backwards compatible: also accept raw password
     if token != ADMIN_PASSWORD:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -52,7 +63,7 @@ class NewPurchase(BaseModel):
     notes: str = ""
 
 class BulkStatus(BaseModel):
-    phones: list[str]
+    phones: list[str] = Field(..., max_length=100)
     status: str
 
 class SettingUpdate(BaseModel):
@@ -525,6 +536,14 @@ let allCourses = [];
 let settings = { statuses: [], tags: [], sources: [] };
 let selectedLeads = new Set();
 
+// XSS protection — escape HTML in all user-supplied data
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+
 // Auth
 function togglePassView() {
   var inp = document.getElementById('loginPass');
@@ -648,7 +667,7 @@ function buildChatWithSessions(msgs) {
     html += '<span><span class="arrow">' + (collapsed ? '◀' : '▼') + '</span> שיחה ' + num + ' — ' + fmtDate(s.start) + ' (' + s.msgs.length + ' הודעות)</span></div>';
     html += '<div id="' + id + '" class="session-messages' + (collapsed ? ' collapsed' : '') + '">';
     for (const m of s.msgs) {
-      html += '<div class="chat-msg ' + m.role + '"><div>' + m.content + '</div><div class="time">' + fmtDate(m.created_at) + '</div></div>';
+      html += '<div class="chat-msg ' + m.role + '"><div>' + escapeHtml(m.content) + '</div><div class="time">' + fmtDate(m.created_at) + '</div></div>';
     }
     html += '</div></div>';
   }
@@ -731,12 +750,12 @@ async function loadDashboard() {
 
   // Followups
   document.getElementById('followupsList').innerHTML = (d.upcoming_followups||[]).map(l=>
-    `<div class="list-item" onclick="openLead('${l.phone}')"><span class="name">${l.name||l.phone}</span><span class="meta">${fmtShortDate(l.next_followup)}</span></div>`
+    `<div class="list-item" onclick="openLead('${escapeHtml(l.phone)}')"><span class="name">${escapeHtml(l.name||l.phone)}</span><span class="meta">${fmtShortDate(l.next_followup)}</span></div>`
   ).join('') || '<div class="empty-state"><div class="icon">📅</div><p>אין פולואפים מתוכננים</p></div>';
 
   // Needs attention
   document.getElementById('attentionList').innerHTML = (d.needs_attention||[]).map(l=>
-    `<div class="list-item" onclick="openLead('${l.phone}')"><span class="name">${l.name||l.phone}</span><span class="attention-badge">לא פעילה 7+ ימים</span></div>`
+    `<div class="list-item" onclick="openLead('${escapeHtml(l.phone)}')"><span class="name">${escapeHtml(l.name||l.phone)}</span><span class="attention-badge">לא פעילה 7+ ימים</span></div>`
   ).join('') || '<div class="empty-state"><div class="icon">✅</div><p>הכל מעודכן</p></div>';
 }
 
@@ -764,12 +783,12 @@ async function loadLeads() {
       <th style="width:30px"><input type="checkbox" onchange="toggleAllLeads(this,${JSON.stringify(leads.map(l=>l.phone)).replace(/"/g,'&quot;')})"></th>
       <th>שם</th><th>טלפון</th><th>סטטוס</th><th>תגיות</th><th>פעילות</th><th>אחרון</th><th>פולואפ</th>
     </tr>
-    ${leads.map(l=>`<tr onclick="openLead('${l.phone}')">
-      <td onclick="event.stopPropagation()"><input type="checkbox" value="${l.phone}" onchange="toggleLeadSelect(this)"></td>
-      <td><div class="lead-name-cell"><div class="lead-row-avatar" style="background:${getAvatarColor(l.name)}">${getInitials(l.name)}</div>${l.name||'—'}</div></td>
-      <td dir="ltr">${l.phone}</td>
-      <td><span class="status-badge" style="background:${getStatusColor(l.status)}20;color:${getStatusColor(l.status)}">${getStatusLabel(l.status)}</span></td>
-      <td>${(l.tags||[]).map(t=>`<span class="tag" style="background:${getTagColor(t)}20;color:${getTagColor(t)}">${t}</span>`).join('')}</td>
+    ${leads.map(l=>`<tr onclick="openLead('${escapeHtml(l.phone)}')">
+      <td onclick="event.stopPropagation()"><input type="checkbox" value="${escapeHtml(l.phone)}" onchange="toggleLeadSelect(this)"></td>
+      <td><div class="lead-name-cell"><div class="lead-row-avatar" style="background:${getAvatarColor(l.name)}">${escapeHtml(getInitials(l.name))}</div>${escapeHtml(l.name||'—')}</div></td>
+      <td dir="ltr">${escapeHtml(l.phone)}</td>
+      <td><span class="status-badge" style="background:${getStatusColor(l.status)}20;color:${getStatusColor(l.status)}">${escapeHtml(getStatusLabel(l.status))}</span></td>
+      <td>${(l.tags||[]).map(t=>`<span class="tag" style="background:${getTagColor(t)}20;color:${getTagColor(t)}">${escapeHtml(t)}</span>`).join('')}</td>
       <td>${activityDot(l.last_contact)}</td>
       <td>${fmtShortDate(l.last_contact)}</td>
       <td>${fmtShortDate(l.next_followup)}</td>
@@ -816,7 +835,7 @@ async function openLead(phone) {
   modal.className = 'modal-overlay';
   modal.innerHTML = `<div class="modal">
     <div class="modal-header">
-      <h2><div class="lead-row-avatar" style="background:${getAvatarColor(lead.name)}">${getInitials(lead.name)}</div> ${lead.name||lead.phone}</h2>
+      <h2><div class="lead-row-avatar" style="background:${getAvatarColor(lead.name)}">${escapeHtml(getInitials(lead.name))}</div> ${escapeHtml(lead.name||lead.phone)}</h2>
       <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">&times;</button>
     </div>
     <div class="modal-tabs">
@@ -865,8 +884,8 @@ async function openLead(phone) {
           <label>הערות</label>
           <textarea onblur="updateField('${phone}','notes',this.value)">${lead.notes||''}</textarea>
         </div>
-        ${lead.ai_summary ? '<div style="margin-top:.5rem;padding:.6rem .8rem;background:#e8f4fd;border-radius:10px;border-right:3px solid var(--blue);font-size:.85rem"><strong>סיכום AI:</strong> '+lead.ai_summary+'</div>' : ''}
-        ${lead.conversation_summary ? '<div style="margin-top:.5rem;padding:.6rem .8rem;background:var(--pink-bg);border-radius:10px;border-right:3px solid var(--pink);font-size:.85rem"><strong>הערות מירב:</strong> '+lead.conversation_summary+'</div>' : ''}
+        ${lead.ai_summary ? '<div style="margin-top:.5rem;padding:.6rem .8rem;background:#e8f4fd;border-radius:10px;border-right:3px solid var(--blue);font-size:.85rem"><strong>סיכום AI:</strong> '+escapeHtml(lead.ai_summary)+'</div>' : ''}
+        ${lead.conversation_summary ? '<div style="margin-top:.5rem;padding:.6rem .8rem;background:var(--pink-bg);border-radius:10px;border-right:3px solid var(--pink);font-size:.85rem"><strong>הערות מירב:</strong> '+escapeHtml(lead.conversation_summary)+'</div>' : ''}
         <div style="text-align:center;color:#bbb;font-size:.78rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid #f5f5f5">
           קשר ראשון: ${fmtDate(lead.first_contact)} &bull; סה"כ שולם: ${lead.total_paid||0}₪
         </div>
@@ -892,7 +911,7 @@ async function openLead(phone) {
 
       <!-- Chat tab -->
       <div id="mtab-chat" class="hidden">
-        ${lead.ai_summary ? '<div style="margin-bottom:.8rem;padding:.6rem .8rem;background:#e8f4fd;border-radius:10px;border-right:3px solid var(--blue);font-size:.85rem"><strong>סיכום AI (אוטומטי):</strong> '+lead.ai_summary+'</div>' : ''}
+        ${lead.ai_summary ? '<div style="margin-bottom:.8rem;padding:.6rem .8rem;background:#e8f4fd;border-radius:10px;border-right:3px solid var(--blue);font-size:.85rem"><strong>סיכום AI (אוטומטי):</strong> '+escapeHtml(lead.ai_summary)+'</div>' : ''}
         <div class="field-group" style="margin-bottom:1rem">
           <label style="font-weight:600;color:var(--pink)">הערות שלי על השיחה</label>
           <textarea style="min-height:60px;background:var(--pink-bg);border-color:var(--pink-light)" placeholder="מה יצא מהשיחה? למה מחכים? מה הצעד הבא?" onblur="updateField('${phone}','conversation_summary',this.value)">${lead.conversation_summary||''}</textarea>

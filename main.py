@@ -6,7 +6,8 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from config import (
@@ -81,6 +82,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="שרי הבוטית", lifespan=lifespan)
+
+# ── CORS — allow only our own domain ─────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://sheri-bot.onrender.com"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type"],
+)
+
 app.include_router(admin_router)
 app.include_router(crm_router)
 
@@ -97,8 +108,27 @@ class ResetRequest(BaseModel):
     phone: str
 
 
-@app.post("/api/chat")
-async def api_chat(req: ChatRequest):
+def _check_auth(request: Request):
+    """Auth check for simulator endpoints."""
+    token = request.cookies.get("admin_token")
+    if not token:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        from admin import _active_sessions, _cleanup_sessions, ADMIN_PASSWORD
+        _cleanup_sessions()
+        if token in _active_sessions:
+            return
+        if token == ADMIN_PASSWORD:
+            return
+    except ImportError:
+        pass
+    from fastapi import HTTPException
+    raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@app.post("/api/chat", dependencies=[Depends(_check_auth)])
+async def api_chat(request: Request, req: ChatRequest):
     """Chat simulator endpoint — same agent, no WhatsApp."""
     try:
         from database import tail
@@ -124,9 +154,9 @@ async def api_chat(req: ChatRequest):
         return {"reply": f"שגיאה: {e}"}
 
 
-@app.post("/api/reset")
-async def api_reset(req: ResetRequest):
-    """Clear conversation history for a phone number."""
+@app.post("/api/reset", dependencies=[Depends(_check_auth)])
+async def api_reset(request: Request, req: ResetRequest):
+    """Clear conversation history for a phone number (simulator only)."""
     from database import _url, _get_headers
     import httpx
     httpx.delete(_url("conversations"), headers=_get_headers(), params={"chat_id": f"eq.{req.phone}"}).raise_for_status()
@@ -170,7 +200,10 @@ async def verify_webhook(request: Request):
 # ── Signature verification ─────────────────────────────────────────
 def _verify_signature(body: bytes, signature: str) -> bool:
     if not WHATSAPP_APP_SECRET:
-        return True  # Skip verification if no secret configured
+        logger.error("WHATSAPP_APP_SECRET not configured — rejecting webhook")
+        return False
+    if not signature:
+        return False
     expected = hmac.new(
         WHATSAPP_APP_SECRET.encode(), body, hashlib.sha256
     ).hexdigest()
@@ -182,10 +215,10 @@ def _verify_signature(body: bytes, signature: str) -> bool:
 async def receive_webhook(request: Request):
     body = await request.body()
 
-    # Verify signature (skip if no signature header — local testing)
+    # Verify webhook signature (MANDATORY — Meta always sends x-hub-signature-256)
     signature = request.headers.get("x-hub-signature-256", "")
-    if signature and WHATSAPP_APP_SECRET and not _verify_signature(body, signature):
-        logger.warning("Invalid webhook signature")
+    if not _verify_signature(body, signature):
+        logger.warning("Invalid or missing webhook signature")
         return Response(content="Invalid signature", status_code=403)
 
     data = await request.json()
