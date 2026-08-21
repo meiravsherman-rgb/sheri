@@ -20,7 +20,7 @@ def request_human_handoff(chat_id: str, reason: str, summary: str) -> str:
     try:
         send_template(
             MANAGER_PHONE,
-            "customer_handoff_alert",
+            "handoff_alert_v2",
             body_params=[phone_display, reason_short, summary_short],
         )
         # Log handoff event in CRM

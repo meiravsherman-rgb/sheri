@@ -11,7 +11,7 @@ logger = logging.getLogger("sheri")
 _API_URL = f"https://graph.facebook.com/v25.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
 _HEADERS = {
     "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
-    "Content-Type": "application/json",
+    "Content-Type": "application/json; charset=utf-8",
 }
 
 
