@@ -1,8 +1,9 @@
 """Human handoff tool — notifies Merav when a customer needs personal attention."""
 
 from config import MANAGER_PHONE, MANAGER_NAME
+from database import display_phone
 from tools import TOOL_REGISTRY
-from tools.whatsapp import send_reply
+from tools.whatsapp import send_template
 
 
 def request_human_handoff(chat_id: str, reason: str, summary: str) -> str:
@@ -13,15 +14,15 @@ def request_human_handoff(chat_id: str, reason: str, summary: str) -> str:
         reason: Why the handoff is needed
         summary: Brief summary of the conversation so far
     """
-    notification = (
-        f"📋 העברה מ-שרי הבוטית\n\n"
-        f"👤 לקוחה: {chat_id}\n"
-        f"📌 סיבה: {reason}\n"
-        f"💬 סיכום: {summary}\n\n"
-        f"💡 ניתן ליצור קשר ישירות עם הלקוחה."
-    )
+    phone_display = display_phone(chat_id)
+    reason_short = reason[:200]
+    summary_short = summary[:500]
     try:
-        send_reply(MANAGER_PHONE, notification)
+        send_template(
+            MANAGER_PHONE,
+            "customer_handoff_alert",
+            body_params=[phone_display, reason_short, summary_short],
+        )
         # Log handoff event in CRM
         try:
             from database import log_lead_event
