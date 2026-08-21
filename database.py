@@ -554,19 +554,36 @@ def set_opt_in(phone: str, opt_in: bool) -> None:
 
 def mark_link_sent(phone: str, course_name: str) -> None:
     """Record that a purchase link was sent to this lead."""
+    from datetime import datetime, timezone, timedelta
     phone = normalize_phone(phone)
-    update_lead(phone, link_sent_at=_now(), link_course_name=course_name,
-                followup_count=0, last_followup_at=None, status="קיבלה קישור")
+    now = datetime.now(timezone.utc)
+    # First followup: 3 hours from now
+    next_followup = (now + timedelta(hours=3)).isoformat()
+    update_lead(phone, link_sent_at=now.isoformat(), link_course_name=course_name,
+                followup_count=0, last_followup_at=None, status="קיבלה קישור",
+                next_followup=next_followup)
     log_lead_event(phone, "link_sent", {"course": course_name})
 
 
 def increment_followup(phone: str) -> None:
     """Increment followup count after sending a follow-up message."""
+    from datetime import datetime, timezone, timedelta
     phone = normalize_phone(phone)
     lead = get_lead(phone)
     if lead:
         count = (lead.get("followup_count") or 0) + 1
-        update_lead(phone, followup_count=count, last_followup_at=_now())
+        now = datetime.now(timezone.utc)
+        # Schedule next followup based on count
+        if count == 1:
+            # After 3h message → next at 23h from link sent
+            next_fu = (now + timedelta(hours=20)).isoformat()
+        elif count == 2:
+            # After 23h message → next alert to Merav at 3 days
+            next_fu = (now + timedelta(days=2)).isoformat()
+        else:
+            next_fu = None  # No more scheduled followups
+        update_lead(phone, followup_count=count, last_followup_at=now.isoformat(),
+                    next_followup=next_fu)
 
 
 def update_lead_score(phone: str, points: int) -> None:

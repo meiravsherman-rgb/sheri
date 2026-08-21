@@ -788,7 +788,7 @@ async function loadLeads() {
       <td><div class="lead-name-cell"><div class="lead-row-avatar" style="background:${getAvatarColor(l.name)}">${escapeHtml(getInitials(l.name))}</div>${escapeHtml(l.name||'—')}</div></td>
       <td dir="ltr">${escapeHtml(l.phone)}</td>
       <td><span class="status-badge" style="background:${getStatusColor(l.status)}20;color:${getStatusColor(l.status)}">${escapeHtml(getStatusLabel(l.status))}</span></td>
-      <td><span style="font-size:.75rem;padding:2px 8px;border-radius:12px;${l.opt_in_marketing?'background:#e8f5e9;color:#2e7d32':'background:#fce4ec;color:#c62828'}">${l.opt_in_marketing?'V':'X'}</span></td>
+      <td><span style="font-size:.75rem;padding:2px 8px;border-radius:12px;${l.opt_in_marketing?'background:#e8f5e9;color:#2e7d32':(l.opt_in_date||l.opt_out_date?'background:#fce4ec;color:#c62828':'background:#fff3e0;color:#e65100')}">${l.opt_in_marketing?'V':(l.opt_in_date||l.opt_out_date?'X':'?')}</span></td>
       <td>${(l.tags||[]).map(t=>`<span class="tag" style="background:${getTagColor(t)}20;color:${getTagColor(t)}">${escapeHtml(t)}</span>`).join('')}</td>
       <td>${activityDot(l.last_contact)}</td>
       <td>${fmtShortDate(l.last_contact)}</td>
@@ -877,7 +877,7 @@ async function openLead(phone) {
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-top:.6rem">
-          <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;${lead.opt_in_marketing?'background:#e8f5e9;border:1px solid #a5d6a7;color:#2e7d32':'background:#fce4ec;border:1px solid #ef9a9a;color:#c62828'}">${lead.opt_in_marketing?'דיוור: מאושר':'דיוור: לא מאושר'}</div>
+          <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;${lead.opt_in_marketing?'background:#e8f5e9;border:1px solid #a5d6a7;color:#2e7d32':(lead.opt_in_date||lead.opt_out_date?'background:#fce4ec;border:1px solid #ef9a9a;color:#c62828':'background:#fff3e0;border:1px solid #ffb74d;color:#e65100')}">${lead.opt_in_marketing?'דיוור: מאושר':(lead.opt_in_date||lead.opt_out_date?'דיוור: לא מאושר':'דיוור: לא נשאלה')}</div>
           <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;background:#e3f2fd;border:1px solid #90caf9;color:#1565c0">ניקוד: ${lead.lead_score||0}</div>
           <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;cursor:pointer;${lead.followup_stopped?'background:#fff3e0;border:1px solid #ffb74d;color:#e65100':'background:#f5f5f5;border:1px solid #e0e0e0;color:#666'}" onclick="toggleFollowupStop('${phone}',${!lead.followup_stopped})" title="לחצי כדי ${lead.followup_stopped?'להפעיל':'לעצור'} הודעות מעקב">${lead.followup_stopped?'מעקב: מושהה':'מעקב: פעיל'}</div>
         </div>

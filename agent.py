@@ -81,10 +81,12 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
     lead = get_lead(chat_id)
     if lead:
         lead_context_parts = [f"\n\n## הקשר לקוחה נוכחית\n- שם: {lead.get('name', 'לא ידוע')}"]
-        if lead.get("opt_in_marketing"):
-            lead_context_parts.append("- הסכמה לדיוור: כן (כבר אישרה — אל תשאלי שוב)")
+        if lead.get("opt_in_marketing") is True:
+            lead_context_parts.append("- הסכמה לדיוור: מאושר (כבר אישרה — אל תשאלי שוב)")
+        elif lead.get("opt_in_date") or lead.get("opt_out_date"):
+            lead_context_parts.append("- הסכמה לדיוור: סירבה (כבדי את ההחלטה, אל תשאלי שוב)")
         else:
-            lead_context_parts.append("- הסכמה לדיוור: לא (עדיין לא אישרה)")
+            lead_context_parts.append("- הסכמה לדיוור: לא נשאלה עדיין (שאלי לקראת סוף השיחה)")
         if lead.get("purchases"):
             lead_context_parts.append(f"- רכישות קודמות: {lead['purchases']}")
         if lead.get("status"):
