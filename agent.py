@@ -115,7 +115,9 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
         if not tool_use_blocks:
             # No tool calls — extract text reply
             text_blocks = [b.text for b in response.content if b.type == "text"]
-            reply = "\n".join(text_blocks) if text_blocks else "🌸"
+            reply = "\n".join(text_blocks).strip() if text_blocks else ""
+            if not reply or len(reply) <= 2:
+                reply = "איך אוכל לעזור לך? 🙂"
             append(chat_id, "assistant", reply)
             return reply
 

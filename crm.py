@@ -781,13 +781,14 @@ async function loadLeads() {
   document.getElementById('leadsTable').innerHTML = leads.length ? `<table>
     <tr>
       <th style="width:30px"><input type="checkbox" onchange="toggleAllLeads(this,${JSON.stringify(leads.map(l=>l.phone)).replace(/"/g,'&quot;')})"></th>
-      <th>שם</th><th>טלפון</th><th>סטטוס</th><th>תגיות</th><th>פעילות</th><th>אחרון</th><th>פולואפ</th>
+      <th>שם</th><th>טלפון</th><th>סטטוס</th><th>דיוור</th><th>תגיות</th><th>פעילות</th><th>אחרון</th><th>פולואפ</th>
     </tr>
     ${leads.map(l=>`<tr onclick="openLead('${escapeHtml(l.phone)}')">
       <td onclick="event.stopPropagation()"><input type="checkbox" value="${escapeHtml(l.phone)}" onchange="toggleLeadSelect(this)"></td>
       <td><div class="lead-name-cell"><div class="lead-row-avatar" style="background:${getAvatarColor(l.name)}">${escapeHtml(getInitials(l.name))}</div>${escapeHtml(l.name||'—')}</div></td>
       <td dir="ltr">${escapeHtml(l.phone)}</td>
       <td><span class="status-badge" style="background:${getStatusColor(l.status)}20;color:${getStatusColor(l.status)}">${escapeHtml(getStatusLabel(l.status))}</span></td>
+      <td><span style="font-size:.75rem;padding:2px 8px;border-radius:12px;${l.opt_in_marketing?'background:#e8f5e9;color:#2e7d32':'background:#fce4ec;color:#c62828'}">${l.opt_in_marketing?'V':'X'}</span></td>
       <td>${(l.tags||[]).map(t=>`<span class="tag" style="background:${getTagColor(t)}20;color:${getTagColor(t)}">${escapeHtml(t)}</span>`).join('')}</td>
       <td>${activityDot(l.last_contact)}</td>
       <td>${fmtShortDate(l.last_contact)}</td>
