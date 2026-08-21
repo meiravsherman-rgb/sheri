@@ -58,12 +58,22 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Seed/init warning: {e}")
     # Import tools to populate TOOL_REGISTRY
     import tools.human_handoff  # noqa: F401
+    import tools.marketing  # noqa: F401
     try:
         import tools.reminders  # noqa: F401
         from tools.reminders import start_scheduler
         start_scheduler()
     except Exception as e:
         logger.warning(f"Reminders disabled: {e}")
+
+    # Start follow-up cron job (every 15 minutes)
+    try:
+        from followup_scheduler import start_followup_scheduler
+        start_followup_scheduler()
+        logger.info("Follow-up scheduler started")
+    except Exception as e:
+        logger.warning(f"Follow-up scheduler disabled: {e}")
+
     logger.info("Sheri bot started")
     yield
     # Shutdown
@@ -255,9 +265,36 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
     except Exception as e:
         logger.warning(f"Failed to mark message as read: {e}")
 
+    # Handle opt-out keyword
+    if text.strip() in ("הסירי", "הסר", "הסירי אותי", "הסר אותי"):
+        try:
+            from database import set_opt_in, log_lead_event
+            set_opt_in(sender_phone, False)
+            log_lead_event(sender_phone, "opted_out", {"method": "keyword"})
+            opt_out_reply = "בסדר גמור, הוסרת מרשימת העדכונים. אם בעתיד תרצי לחזור, מוזמנת באהבה."
+            send_reply(sender_phone, opt_out_reply)
+            append(sender_phone, "user", text)
+            append(sender_phone, "assistant", opt_out_reply)
+            logger.info(f"Opt-out processed for {sender_phone}")
+            return
+        except Exception as e:
+            logger.error(f"Opt-out error for {sender_phone}: {e}")
+
     # Check if this is a new user (no prior conversations)
     from database import tail
     is_new_user = len(tail(sender_phone, 1)) == 0
+
+    # Check if returning lead (has previous conversations but new session)
+    if not is_new_user:
+        try:
+            from database import get_lead, get_purchases
+            lead = get_lead(sender_phone)
+            purchases = get_purchases(sender_phone) if lead else []
+            if lead and purchases:
+                from tools.whatsapp import alert_returning_lead
+                alert_returning_lead(lead.get("name") or sender_name or "לקוחה")
+        except Exception:
+            pass
 
     # Process with AI agent
     try:

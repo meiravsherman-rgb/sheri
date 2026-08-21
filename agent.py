@@ -5,7 +5,7 @@ import logging
 import anthropic
 
 from config import ANTHROPIC_API_KEY, LLM_MODEL, MAX_HISTORY
-from database import append, tail, get_lead_conversations, update_lead
+from database import append, tail, get_lead_conversations, update_lead, set_opt_in, mark_link_sent, update_lead_score
 from prompt import build_system_prompt
 from tools import TOOL_REGISTRY
 
@@ -17,6 +17,9 @@ FRAMEWORK_INJECTED_CHAT_ID = {
     "list_reminders",
     "cancel_reminder",
     "request_human_handoff",
+    "set_marketing_opt_in",
+    "track_link_sent",
+    "update_lead_score",
 }
 
 _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)

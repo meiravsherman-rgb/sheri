@@ -502,6 +502,89 @@ def update_crm_setting(setting_key: str, setting_value) -> None:
     ).raise_for_status()
 
 
+# ── Followup Queries ──────────────────────────────────────────────
+
+def get_leads_for_followup(hours_since_link: float, max_followup_count: int) -> list[dict]:
+    """Get leads that need a follow-up message.
+
+    Returns leads where:
+    - link_sent_at is set and older than hours_since_link hours
+    - followup_count < max_followup_count
+    - opt_in_marketing = true
+    - followup_stopped = false
+    - status is NOT 'נרשמה' or 'לא רלוונטי'
+    """
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours_since_link)).isoformat()
+
+    r = httpx.get(_url("leads"), headers=_get_headers(), params={
+        "select": "*",
+        "link_sent_at": f"lt.{cutoff}",
+        "opt_in_marketing": "eq.true",
+        "followup_stopped": "eq.false",
+        "followup_count": f"lt.{max_followup_count}",
+        "status": "not.in.(נרשמה,לא רלוונטי)",
+        "order": "link_sent_at.asc",
+    })
+    r.raise_for_status()
+    return r.json()
+
+
+def set_opt_in(phone: str, opt_in: bool) -> None:
+    """Set marketing opt-in status for a lead."""
+    phone = normalize_phone(phone)
+    now = _now()
+    if opt_in:
+        update_lead(phone, opt_in_marketing=True, opt_in_date=now)
+    else:
+        update_lead(phone, opt_in_marketing=False, opt_out_date=now, followup_stopped=True)
+
+
+def mark_link_sent(phone: str, course_name: str) -> None:
+    """Record that a purchase link was sent to this lead."""
+    phone = normalize_phone(phone)
+    update_lead(phone, link_sent_at=_now(), link_course_name=course_name,
+                followup_count=0, last_followup_at=None, status="קיבלה קישור")
+    log_lead_event(phone, "link_sent", {"course": course_name})
+
+
+def increment_followup(phone: str) -> None:
+    """Increment followup count after sending a follow-up message."""
+    phone = normalize_phone(phone)
+    lead = get_lead(phone)
+    if lead:
+        count = (lead.get("followup_count") or 0) + 1
+        update_lead(phone, followup_count=count, last_followup_at=_now())
+
+
+def update_lead_score(phone: str, points: int) -> None:
+    """Add points to lead score."""
+    phone = normalize_phone(phone)
+    lead = get_lead(phone)
+    if lead:
+        new_score = (lead.get("lead_score") or 0) + points
+        update_lead(phone, lead_score=new_score)
+
+
+def get_coupon_code() -> str:
+    """Get the active coupon code from content_sections, or empty string."""
+    section = get_section("sec_coupon_code")
+    if section:
+        return (section.get("body") or "").strip()
+    return ""
+
+
+def register_manual_purchase(phone: str, course_name: str, amount: float,
+                              payment_method: str, course_id: int = None,
+                              notes: str = "") -> int:
+    """Register a manual purchase (not via Cardcom) and update lead status."""
+    phone = normalize_phone(phone)
+    pid = create_purchase(phone, course_name, amount, course_id, payment_method, notes)
+    update_lead(phone, status="נרשמה", followup_stopped=True)
+    log_lead_event(phone, "purchase", {"course": course_name, "amount": amount, "method": payment_method})
+    return pid
+
+
 # ── Questionnaire Seed ────────────────────────────────────────────
 
 _GUIDE_QUESTIONS = [

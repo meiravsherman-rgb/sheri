@@ -1,7 +1,7 @@
 """System prompt generator — builds the bot's personality from spec.json + DB content."""
 
 from config import SPEC, KNOWLEDGE_BASE
-from database import build_knowledge_base, build_rules_text, get_all_sections
+from database import build_knowledge_base, build_rules_text, get_all_sections, get_coupon_code
 
 # ── In-memory prompt cache ────────────────────────────────────────
 _prompt_cache: str | None = None
@@ -38,6 +38,19 @@ def _dynamic_rules() -> str:
     for i, (key, body) in enumerate(spec_rules.items(), 1):
         lines.append(f"{i}. {body}")
     return "\n".join(lines)
+
+
+def _coupon_section() -> str:
+    """Build coupon info for the prompt, if an active coupon exists."""
+    try:
+        code = get_coupon_code()
+        if code:
+            return f"""## קוד הנחה פעיל
+יש כרגע קוד הנחה פעיל: **{code}**
+הציעי אותו ללקוחה כשהיא מתלבטת לגבי רכישה, או כשהיא שואלת על הנחות. אל תציעי אותו יזום בתחילת השיחה — רק כשרלוונטי."""
+    except Exception:
+        pass
+    return ""
 
 
 def _tools_section(tool_registry: dict) -> str:
@@ -105,6 +118,31 @@ def _build_fresh(tool_registry: dict) -> str:
 ## מאגר ידע
 
 {_dynamic_knowledge()}
+
+## הסכמה לדיוור (Opt-In)
+בכל שיחה ראשונה עם לקוחה חדשה, לקראת סוף השיחה (אחרי שענית על השאלה הראשונה שלה), שאלי אותה:
+"אשמח ללוות אותך עד שתקבלי מענה לצורך שלך. לשם כך אבקש שתאשרי לי לשלוח לך הודעות פה בוואטסאפ. מסכימה? את יכולה בכל שלב לשלוח לי את המילה 'הסירי' ולא אפנה אליך יותר בוואטסאפ"
+
+אם הלקוחה מסכימה — השתמשי בכלי `set_marketing_opt_in` עם opt_in=true.
+אם הלקוחה מסרבת — אל תלחצי, כבדי את ההחלטה.
+
+## ביטול דיוור
+אם לקוחה שולחת את המילה "הסירי" — השתמשי בכלי `set_marketing_opt_in` עם opt_in=false, ואמרי: "בסדר גמור, הוסרת מרשימת העדכונים. אם בעתיד תרצי לחזור, מוזמנת באהבה."
+
+## מעקב אחרי שליחת קישור רכישה
+כשאת שולחת ללקוחה קישור לרכישת קורס — השתמשי בכלי `track_link_sent` עם שם הקורס. זה יאפשר לנו לעקוב ולשלוח תזכורות.
+
+## ניקוד לידים
+השתמשי בכלי `update_lead_score` בזמנים הבאים:
+- לקוחה שואלת על קורס ספציפי: points=10
+- לקוחה שואלת על מחיר: points=15
+- שלחת קישור רכישה: points=20
+- לקוחה מבקשת לדבר עם מירב: points=25
+
+## לקוחה חוזרת שכבר רכשה
+אם לקוחה שכבר רכשה קורס בעבר חוזרת ופונה — אל תניחי אוטומטית שהיא רוצה לרכוש קורס נוסף. בדקי איתה מה הצורך שלה: ייתכן שהיא צריכה שירות לקוחות, יש לה שאלה על הקורס שרכשה, או שהיא כן מעוניינת בקורס נוסף.
+
+{_coupon_section()}
 
 ## כלים
 {_tools_section(tool_registry)}

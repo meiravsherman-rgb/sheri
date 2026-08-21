@@ -434,6 +434,20 @@ textarea { min-height: 80px; resize: vertical; }
     <div id="coursesList"></div>
 </div>
 
+<!-- ── Coupon Code ── -->
+<div class="section" id="sec-courses" style="margin-top:0">
+    <div class="card" style="border-right:3px solid #f39c12;margin-top:1rem">
+        <div style="display:flex;align-items:center;gap:.8rem">
+            <div style="flex:1">
+                <label style="font-weight:600;color:#e67e22;margin-bottom:.3rem;display:block">קוד הנחה פעיל</label>
+                <p style="font-size:.82rem;color:#999;margin:0 0 .5rem 0">אם יש קוד הנחה פעיל — הבוט יציע אותו ללקוחות בזמן המתאים. אם ריק — אין הנחה.</p>
+                <input type="text" id="coupon-code" placeholder="לדוגמה: SHERI36" style="width:200px;font-size:1rem;font-weight:600;letter-spacing:1px" value="">
+            </div>
+            <button class="btn btn-save" onclick="saveCoupon()">שמור</button>
+        </div>
+    </div>
+</div>
+
 <!-- ── FAQ ── -->
 <div class="section" id="sec-faq">
     <div class="section-header">
@@ -589,7 +603,33 @@ function showStatus(msg, type='success') {
 }
 
 // ── Load all ──
-function loadAll() { loadCourses(); loadFaq(); loadContent(); loadRules(); loadFeedback(); loadGuide(); }
+function loadAll() { loadCourses(); loadFaq(); loadContent(); loadRules(); loadFeedback(); loadGuide(); loadCoupon(); }
+
+// ── Coupon Code ──
+async function loadCoupon() {
+    try {
+        const res = await fetch(API + '/sections');
+        if (!res.ok) return;
+        const sections = await res.json();
+        const coupon = sections.find(s => s.section_key === 'sec_coupon_code');
+        if (coupon && coupon.body) {
+            document.getElementById('coupon-code').value = coupon.body;
+        }
+    } catch(e) {}
+}
+
+async function saveCoupon() {
+    const code = document.getElementById('coupon-code').value.trim();
+    try {
+        const res = await fetch(API + '/sections', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({section_key: 'sec_coupon_code', title: 'קוד הנחה פעיל', body: code})
+        });
+        if (res.ok) statusMsg('קוד הנחה נשמר!', 'success');
+        else statusMsg('שגיאה בשמירה', 'error');
+    } catch(e) { statusMsg('שגיאה', 'error'); }
+}
 
 // ── Courses ──
 async function loadCourses() {

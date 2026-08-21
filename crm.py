@@ -36,6 +36,7 @@ class LeadUpdate(BaseModel):
     next_followup: str | None = None
     name: str | None = None
     conversation_summary: str | None = None
+    followup_stopped: bool | None = None
 
 class NewLead(BaseModel):
     phone: str
@@ -164,11 +165,25 @@ async def api_all_purchases(lead_phone: str = ""):
 
 @router.post("/api/purchases", dependencies=[Depends(check_auth)])
 async def api_create_purchase(req: NewPurchase):
-    pid = create_purchase(req.lead_phone, req.course_name, req.amount,
+    from database import normalize_phone
+    phone = normalize_phone(req.lead_phone)
+    pid = create_purchase(phone, req.course_name, req.amount,
                           req.course_id, req.payment_method, req.notes)
-    log_lead_event(req.lead_phone, "purchase", {
-        "course": req.course_name, "amount": req.amount
+    log_lead_event(phone, "purchase", {
+        "course": req.course_name, "amount": req.amount, "method": req.payment_method
     })
+    # Update status and stop followups
+    update_lead(phone, status="נרשמה", followup_stopped=True)
+    # Send purchase confirmation and alert Merav
+    try:
+        from tools.whatsapp import send_purchase_confirmation, alert_purchase
+        lead = get_lead(phone)
+        name = (lead.get("name") if lead else "") or ""
+        if name:
+            send_purchase_confirmation(phone, name)
+        alert_purchase(name or display_phone(phone), req.course_name, req.amount)
+    except Exception:
+        pass  # Don't fail the purchase if notification fails
     return {"id": pid}
 
 
@@ -841,6 +856,11 @@ async function openLead(phone) {
             ${settings.tags.map(t=>`<span class="tag-toggle ${leadTags.includes(t.key)?'active':''}" style="${leadTags.includes(t.key)?'border-color:'+t.color+';background:'+t.color+'20;color:'+t.color:''}" onclick="toggleTag(this,'${phone}','${t.key}','${t.color}')">${t.key}</span>`).join('')}
           </div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-top:.6rem">
+          <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;${lead.opt_in_marketing?'background:#e8f5e9;border:1px solid #a5d6a7;color:#2e7d32':'background:#fce4ec;border:1px solid #ef9a9a;color:#c62828'}">${lead.opt_in_marketing?'דיוור: מאושר':'דיוור: לא מאושר'}</div>
+          <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;background:#e3f2fd;border:1px solid #90caf9;color:#1565c0">ניקוד: ${lead.lead_score||0}</div>
+          <div style="padding:.5rem .7rem;border-radius:10px;font-size:.82rem;text-align:center;cursor:pointer;${lead.followup_stopped?'background:#fff3e0;border:1px solid #ffb74d;color:#e65100':'background:#f5f5f5;border:1px solid #e0e0e0;color:#666'}" onclick="toggleFollowupStop('${phone}',${!lead.followup_stopped})" title="לחצי כדי ${lead.followup_stopped?'להפעיל':'לעצור'} הודעות מעקב">${lead.followup_stopped?'מעקב: מושהה':'מעקב: פעיל'}</div>
+        </div>
         <div class="field-group">
           <label>הערות</label>
           <textarea onblur="updateField('${phone}','notes',this.value)">${lead.notes||''}</textarea>
@@ -921,6 +941,12 @@ async function toggleTag(el, phone, tag, color) {
   await updateField(phone, 'tags', tags);
 }
 
+async function toggleFollowupStop(phone, stopped) {
+  await apiFetch(`/leads/${phone}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({followup_stopped:stopped})});
+  toast(stopped ? 'הודעות מעקב הושהו' : 'הודעות מעקב הופעלו');
+  openLead(phone);
+}
+
 // New lead modal
 function showNewLeadModal() {
   const modal = document.createElement('div');
@@ -986,6 +1012,14 @@ function showNewPurchaseModal(prefillPhone='') {
       </div>
       <div class="field-group"><label>שם קורס (אם אחר)</label><input id="np-cname"></div>
       <div class="field-group"><label>סכום (₪)</label><input id="np-amount" type="number"></div>
+      <div class="field-group"><label>אמצעי תשלום</label>
+        <select id="np-method">
+          <option value="cardcom">Cardcom</option>
+          <option value="transfer">העברה בנקאית</option>
+          <option value="bit">ביט</option>
+          <option value="cash">מזומן</option>
+        </select>
+      </div>
       <div class="field-group"><label>הערות</label><input id="np-notes"></div>
       <button class="btn btn-green" style="width:100%;margin-top:1rem" onclick="createPurchase()">שמור רכישה</button>
     </div>
@@ -1012,7 +1046,8 @@ async function createPurchase() {
   const amount=parseFloat(document.getElementById('np-amount').value);
   const notes=document.getElementById('np-notes').value;
   if(!phone||!amount){alert('חסר טלפון או סכום');return;}
-  const body={lead_phone:phone, course_name:cname, amount, notes, payment_method:'cardcom'};
+  const method=document.getElementById('np-method').value;
+  const body={lead_phone:phone, course_name:cname, amount, notes, payment_method:method};
   if(courseId&&courseId!=='custom') body.course_id=parseInt(courseId);
   await apiFetch('/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   document.querySelector('.modal-overlay').remove();
