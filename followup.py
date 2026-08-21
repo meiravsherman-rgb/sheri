@@ -92,12 +92,6 @@ def run_followup_cycle():
                 except (ValueError, TypeError):
                     continue
 
-            # Check if customer responded after link was sent (skip if so)
-            last_contact = lead.get("last_contact", "")
-            if last_contact and link_sent and last_contact > link_sent:
-                # Customer already responded — don't send followup
-                continue
-
             # Send the message
             message = template.format(name=name, course=course)
             try:
