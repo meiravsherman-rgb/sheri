@@ -121,10 +121,15 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
         # Check if the response contains tool use
         tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
 
+        logger.info(f"LLM iteration: text_blocks={len(text_blocks)} tool_blocks={len(tool_use_blocks)} stop={response.stop_reason} collected={len(collected_text)}")
+        for tb in tool_use_blocks:
+            logger.info(f"  Tool call: {tb.name}({tb.input})")
+
         if not tool_use_blocks:
             # No more tool calls — return collected text
             reply = "\n".join(collected_text).strip()
             if not reply or len(reply) <= 2:
+                logger.warning(f"Empty/short reply after tool loop. collected_text={collected_text}")
                 reply = "איך אוכל לעזור לך? 🙂"
             append(chat_id, "assistant", reply)
             return reply
