@@ -5,7 +5,7 @@ import logging
 import anthropic
 
 from config import ANTHROPIC_API_KEY, LLM_MODEL, MAX_HISTORY
-from database import append, tail, get_lead_conversations, update_lead, set_opt_in, mark_link_sent, update_lead_score
+from database import append, tail, get_lead_conversations, update_lead, set_opt_in, mark_link_sent, update_lead_score, get_lead
 from prompt import build_system_prompt
 from tools import TOOL_REGISTRY
 
@@ -76,6 +76,21 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
 
     # Build messages for Claude
     system_prompt = build_system_prompt(TOOL_REGISTRY)
+
+    # Add lead context so bot knows opt-in status, purchases, etc.
+    lead = get_lead(chat_id)
+    if lead:
+        lead_context_parts = [f"\n\n## הקשר לקוחה נוכחית\n- שם: {lead.get('name', 'לא ידוע')}"]
+        if lead.get("opt_in_marketing"):
+            lead_context_parts.append("- הסכמה לדיוור: כן (כבר אישרה — אל תשאלי שוב)")
+        else:
+            lead_context_parts.append("- הסכמה לדיוור: לא (עדיין לא אישרה)")
+        if lead.get("purchases"):
+            lead_context_parts.append(f"- רכישות קודמות: {lead['purchases']}")
+        if lead.get("status"):
+            lead_context_parts.append(f"- סטטוס: {lead['status']}")
+        system_prompt += "\n".join(lead_context_parts)
+
     messages = history + [{"role": "user", "content": message_text}]
 
     # Prepare tools

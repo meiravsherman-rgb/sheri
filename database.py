@@ -490,7 +490,19 @@ def get_crm_settings() -> dict:
     """Get all CRM settings as a dict of {key: value}."""
     r = httpx.get(_url("crm_settings"), headers=_get_headers(), params={"select": "*"})
     r.raise_for_status()
-    return {row["setting_key"]: row["setting_value"] for row in r.json()}
+    result = {}
+    for row in r.json():
+        val = row["setting_value"]
+        # Fix double-encoded JSON strings (stored as '"[...]"' instead of '[...]')
+        if isinstance(val, str):
+            try:
+                parsed = json.loads(val)
+                if isinstance(parsed, (list, dict)):
+                    val = parsed
+            except (json.JSONDecodeError, ValueError):
+                pass
+        result[row["setting_key"]] = val
+    return result
 
 
 def update_crm_setting(setting_key: str, setting_value) -> None:
@@ -498,7 +510,7 @@ def update_crm_setting(setting_key: str, setting_value) -> None:
     httpx.patch(
         _url("crm_settings"), headers=_get_headers(),
         params={"setting_key": f"eq.{setting_key}"},
-        json={"setting_value": json.dumps(setting_value) if isinstance(setting_value, (list, dict)) else setting_value, "updated_at": _now()},
+        json={"setting_value": setting_value, "updated_at": _now()},
     ).raise_for_status()
 
 
