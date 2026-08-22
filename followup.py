@@ -9,7 +9,7 @@ from database import (
     display_phone, normalize_phone,
 )
 from tools.whatsapp import (
-    send_reply, alert_cold_lead, alert_purchase,
+    send_reply, send_template, alert_cold_lead, alert_purchase,
 )
 
 logger = logging.getLogger("sheri")
@@ -48,8 +48,9 @@ FOLLOWUP_MESSAGES = {
 # Alert to Merav after 3 days (72 hours) — no message to customer
 MERAV_ALERT_HOURS = 72
 
-# 14-day template (needs Meta approval — placeholder for future)
+# 14-day re-engagement template (APPROVED — followup_14d_v2)
 REENGAGEMENT_HOURS = 14 * 24  # 336 hours
+REENGAGEMENT_WINDOW = 18 * 24  # 432 hours — stop after 18 days
 
 
 def run_followup_cycle():
@@ -109,6 +110,9 @@ def run_followup_cycle():
     # Merav alerts — 3 days after link, no purchase
     _send_merav_cold_alerts(now)
 
+    # 14-day re-engagement template
+    processed += _send_14d_reengagement(now)
+
     if processed:
         logger.info(f"Followup cycle complete: {processed} messages sent")
 
@@ -151,6 +155,49 @@ def _send_merav_cold_alerts(now: datetime):
             logger.info(f"Cold lead alert sent to Merav for {display_phone(phone)}")
         except Exception as e:
             logger.error(f"Failed to send cold lead alert for {phone}: {e}")
+
+
+def _send_14d_reengagement(now: datetime) -> int:
+    """Send 14-day re-engagement template to leads who got a link 14 days ago."""
+    processed = 0
+    try:
+        leads = get_leads_for_followup(hours_since_link=REENGAGEMENT_HOURS, max_followup_count=999)
+    except Exception:
+        return 0
+
+    for lead in leads:
+        phone = lead["phone"]
+        name = lead.get("name") or ""
+        followup_count = lead.get("followup_count") or 0
+        link_sent = lead.get("link_sent_at", "")
+
+        # Only send when followup_count is exactly 3 (after 3h + 23h messages + Merav alert)
+        if followup_count != 3:
+            continue
+
+        if link_sent:
+            try:
+                link_dt = datetime.fromisoformat(link_sent.replace("Z", "+00:00"))
+                hours_since = (now - link_dt).total_seconds() / 3600
+                # Send between 14-18 days to avoid re-sending
+                if not (REENGAGEMENT_HOURS <= hours_since <= REENGAGEMENT_WINDOW):
+                    continue
+            except (ValueError, TypeError):
+                continue
+
+        try:
+            send_template(phone, "followup_14d_v2", body_params=[name])
+            increment_followup(phone)
+            log_lead_event(phone, "followup_sent", {
+                "message_number": 4,
+                "type": "14d_reengagement",
+            })
+            processed += 1
+            logger.info(f"14-day re-engagement sent to {display_phone(phone)}")
+        except Exception as e:
+            logger.error(f"Failed to send 14d re-engagement to {phone}: {e}")
+
+    return processed
 
 
 def send_weekly_report():

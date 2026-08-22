@@ -114,9 +114,9 @@ def mark_as_read(message_id: str) -> dict:
 # ── Alerts to Merav ───────────────────────────────────────────────
 
 def _alert_merav(text: str) -> None:
-    """Send an alert message to Merav's WhatsApp."""
+    """Send an alert message to Merav's WhatsApp (via approved template)."""
     try:
-        send_reply(MANAGER_PHONE, text)
+        send_template(MANAGER_PHONE, "biz_notification_v2", body_params=[text])
         logger.info(f"Alert sent to Merav: {text[:60]}")
     except Exception as e:
         logger.error(f"Failed to alert Merav: {e}")
@@ -143,14 +143,9 @@ def alert_returning_lead(name: str) -> None:
 
 
 def send_purchase_confirmation(phone: str, name: str) -> None:
-    """Send purchase confirmation message to customer."""
-    text = (
-        f"היי {name}, ברוכה הבאה לשיטת שרמן.\n"
-        "מאחלת לך צפייה מהנה ומועילה.\n"
-        "לכל עניין, הרגישי בנוח לפנות אלי כאן"
-    )
+    """Send purchase confirmation message to customer (via approved template)."""
     try:
-        send_reply(phone, text)
+        send_template(phone, "purchase_confirm_v2", body_params=[name])
         logger.info(f"Purchase confirmation sent to {phone}")
     except Exception as e:
         logger.error(f"Failed to send purchase confirmation to {phone}: {e}")

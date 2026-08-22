@@ -40,6 +40,13 @@ BUTTON_TO_MESSAGE = {
     "btn_talk": "אני רוצה לדבר עם מירב",
 }
 
+# 14-day re-engagement template button responses (quick_reply)
+REENGAGEMENT_BUTTONS = {
+    "כן, אשמח לעזרה": "want_help",
+    "אצטרף בהמשך": "join_later",
+    "ויתרתי, תודה": "gave_up",
+}
+
 # ── Static auto-reply (used while bot is in upgrade mode) ────────
 AUTO_REPLY = """הי, ברוכה הבאה!
 שמחה על העניין שאת מביעה בשיטת שרמן.
@@ -250,6 +257,39 @@ async def receive_webhook(request: Request):
     return {"status": "ok"}
 
 
+async def _handle_reengagement_response(sender_phone: str, btn_title: str, contacts: list[dict]) -> None:
+    """Handle 14-day re-engagement template button responses."""
+    from database import update_lead, log_lead_event, get_lead
+
+    lead = get_lead(sender_phone)
+    name = (lead.get("name") if lead else "") or ""
+    action = REENGAGEMENT_BUTTONS[btn_title]
+
+    log_lead_event(sender_phone, "reengagement_response", {"button": btn_title, "action": action})
+
+    if action == "want_help":
+        reply = f"שמחה לשמוע, {name}! איך אוכל לעזור לך? ספרי לי מה את מחפשת ואשמח לכוון אותך."
+        send_reply(sender_phone, reply)
+        append(sender_phone, "user", btn_title)
+        append(sender_phone, "assistant", reply)
+
+    elif action == "join_later":
+        reply = "נהדר. אני תמיד פה לשירותך."
+        send_reply(sender_phone, reply)
+        update_lead(sender_phone, status="אצטרף בהמשך", followup_stopped=True)
+        append(sender_phone, "user", btn_title)
+        append(sender_phone, "assistant", reply)
+
+    elif action == "gave_up":
+        reply = "אני תמיד פה לשירותך. אם בעתיד תרצי לחזור, מוזמנת באהבה."
+        send_reply(sender_phone, reply)
+        update_lead(sender_phone, status="לא רלוונטי", followup_stopped=True)
+        append(sender_phone, "user", btn_title)
+        append(sender_phone, "assistant", reply)
+
+    logger.info(f"Reengagement response from {sender_phone}: {action}")
+
+
 async def _process_message(msg: dict, contacts: list[dict]) -> None:
     """Process a single incoming WhatsApp message."""
     message_id = msg.get("id", "")
@@ -265,8 +305,15 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
         interactive = msg.get("interactive", {})
         btn_reply = interactive.get("button_reply", {})
         btn_id = btn_reply.get("id", "")
-        text = BUTTON_TO_MESSAGE.get(btn_id, btn_reply.get("title", ""))
+        btn_title = btn_reply.get("title", "")
         sender_phone = msg.get("from", "")
+
+        # Check if this is a 14-day re-engagement button response
+        if btn_title in REENGAGEMENT_BUTTONS:
+            await _handle_reengagement_response(sender_phone, btn_title, contacts)
+            return
+
+        text = BUTTON_TO_MESSAGE.get(btn_id, btn_title)
     elif msg_type == "text":
         sender_phone = msg.get("from", "")
         text = msg.get("text", {}).get("body", "")
