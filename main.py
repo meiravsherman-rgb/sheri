@@ -380,15 +380,17 @@ async def _process_message(msg: dict, contacts: list[dict]) -> None:
     try:
         from agent import handle_message, generate_ai_summary
         reply = handle_message(sender_phone, sender_name, text)
-        send_reply(sender_phone, reply)
-        logger.info(f"Agent reply sent to {sender_phone}")
 
-        # Send welcome buttons for new users
         if is_new_user:
+            # New user: single message with agent reply + welcome buttons
             try:
-                send_buttons(sender_phone, WELCOME_BUTTONS_TEXT, WELCOME_BUTTONS)
+                send_buttons(sender_phone, reply, WELCOME_BUTTONS)
             except Exception as e:
                 logger.warning(f"Failed to send welcome buttons: {e}")
+                send_reply(sender_phone, reply)  # Fallback to plain text
+        else:
+            send_reply(sender_phone, reply)
+        logger.info(f"Agent reply sent to {sender_phone}")
 
         # Generate AI summary for CRM
         try:
