@@ -158,7 +158,10 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
 
 
 def generate_ai_summary(chat_id: str) -> None:
-    """Generate an AI summary of the conversation and save to lead.ai_summary."""
+    """Generate an AI summary of the conversation and save to lead.ai_summary.
+
+    Includes the existing summary as context so historical details are preserved.
+    """
     try:
         convos = get_lead_conversations(chat_id, limit=30)
         if not convos:
@@ -169,11 +172,20 @@ def generate_ai_summary(chat_id: str) -> None:
             for m in convos[-20:]  # last 20 messages
         )
 
+        # Include existing summary so historical context is preserved
+        lead = get_lead(chat_id)
+        existing_summary = (lead.get("ai_summary") or "") if lead else ""
+
+        prompt_parts = []
+        if existing_summary:
+            prompt_parts.append(f"סיכום קודם:\n{existing_summary}\n")
+        prompt_parts.append(f"שיחה אחרונה:\n{convo_text}")
+
         response = _client.messages.create(
             model=LLM_MODEL,
-            max_tokens=150,
-            system="סכמי בעברית ב-1-2 משפטים בלבד. רק: מה רצתה, מה קיבלה, מה הצעד הבא. בלי מילות מילוי.",
-            messages=[{"role": "user", "content": f"סכמי:\n\n{convo_text}"}],
+            max_tokens=200,
+            system="סכמי בעברית ב-2-3 משפטים. שמרי על פרטים חשובים מהסיכום הקודם (שמות קורסים, מחירים, העדפות) ושלבי אותם עם מידע חדש. רק: מה רצתה, מה קיבלה, מה הצעד הבא. בלי מילות מילוי.",
+            messages=[{"role": "user", "content": "\n".join(prompt_parts)}],
         )
 
         summary = response.content[0].text.strip()
