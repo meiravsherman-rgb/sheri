@@ -91,6 +91,8 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
             lead_context_parts.append(f"- רכישות קודמות: {lead['purchases']}")
         if lead.get("status"):
             lead_context_parts.append(f"- סטטוס: {lead['status']}")
+        if lead.get("ai_summary"):
+            lead_context_parts.append(f"- סיכום שיחות קודמות: {lead['ai_summary']}")
         system_prompt += "\n".join(lead_context_parts)
 
     messages = history + [{"role": "user", "content": message_text}]
