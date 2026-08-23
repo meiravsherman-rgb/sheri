@@ -209,13 +209,14 @@ def build_knowledge_base() -> str:
     """Build the full knowledge base text from DB content."""
     parts = []
 
+    # Skip keys handled elsewhere or no longer needed
+    _skip_prefixes = ("guide_", "sec_coupon_")
     for s in get_all_sections():
         key = s.get("section_key", "")
         body = (s.get("body") or "").strip()
-        # Skip guide entries with no content (questionnaire answers belong in rules)
-        if key.startswith("guide_") and not body:
-            continue
         if not body:
+            continue
+        if any(key.startswith(p) for p in _skip_prefixes):
             continue
         parts.append(f"## {s['title']}\n\n{body}")
 

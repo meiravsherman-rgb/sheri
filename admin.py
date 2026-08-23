@@ -375,12 +375,20 @@ textarea { min-height: 80px; resize: vertical; }
 <!-- ── Coupon Code ── -->
 <div class="section" id="sec-courses" style="margin-top:0">
     <div class="card" style="border-right:3px solid #f39c12;margin-top:1rem">
-        <div style="display:flex;align-items:center;gap:.8rem">
-            <div style="flex:1">
-                <label style="font-weight:600;color:#e67e22;margin-bottom:.3rem;display:block">קוד הנחה פעיל</label>
-                <p style="font-size:.82rem;color:#999;margin:0 0 .5rem 0">אם יש קוד הנחה פעיל — הבוט יציע אותו ללקוחות בזמן המתאים. אם ריק — אין הנחה.</p>
-                <input type="text" id="coupon-code" placeholder="לדוגמה: SHERI36" style="width:200px;font-size:1rem;font-weight:600;letter-spacing:1px" value="">
+        <label style="font-weight:600;color:#e67e22;margin-bottom:.3rem;display:block">קוד הנחה</label>
+        <p style="font-size:.82rem;color:#999;margin:0 0 .8rem 0">אם יש קוד הנחה פעיל — הבוט יציע אותו ללקוחות בזמן המתאים. אם ריק — אין הנחה כרגע.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+                <label>קוד הקופון</label>
+                <input type="text" id="coupon-code" placeholder="למשל: SHERI36" style="font-weight:600;letter-spacing:1px" value="">
             </div>
+            <div>
+                <label>פרטי ההנחה</label>
+                <input type="text" id="coupon-desc" placeholder="למשל: 36% הנחה על קורסים דיגיטליים" value="">
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+            <div id="coupon-status" style="font-size:.85rem;flex:1"></div>
             <button class="btn btn-save" onclick="saveCoupon()">שמור</button>
         </div>
     </div>
@@ -508,23 +516,40 @@ async function loadCoupon() {
         if (!res.ok) return;
         const sections = await res.json();
         const coupon = sections.find(s => s.section_key === 'sec_coupon_code');
+        const couponDesc = sections.find(s => s.section_key === 'sec_coupon_desc');
+        const codeEl = document.getElementById('coupon-code');
+        const descEl = document.getElementById('coupon-desc');
+        const statusEl = document.getElementById('coupon-status');
         if (coupon && coupon.body) {
-            document.getElementById('coupon-code').value = coupon.body;
+            codeEl.value = coupon.body;
+            const desc = (couponDesc && couponDesc.body) ? couponDesc.body : '';
+            descEl.value = desc;
+            statusEl.innerHTML = '<span style="color:#2e7d32;font-weight:600">פעיל: ' + esc(coupon.body) + (desc ? ' (' + esc(desc) + ')' : '') + '</span>';
+        } else {
+            codeEl.value = '';
+            descEl.value = '';
+            statusEl.innerHTML = '<span style="color:#999">אין קוד הנחה פעיל כרגע</span>';
         }
     } catch(e) {}
 }
 
 async function saveCoupon() {
     const code = document.getElementById('coupon-code').value.trim();
+    const desc = document.getElementById('coupon-desc').value.trim();
     try {
-        const res = await fetch(API + '/sections', {
+        await fetch(API + '/sections', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({section_key: 'sec_coupon_code', title: 'קוד הנחה פעיל', body: code})
         });
-        if (res.ok) showStatus('קוד הנחה נשמר!', 'success');
-        else showStatus('שגיאה בשמירה', 'error');
-    } catch(e) { showStatus('שגיאה', 'error'); }
+        await fetch(API + '/sections', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({section_key: 'sec_coupon_desc', title: 'פרטי הנחה', body: desc})
+        });
+        showStatus(code ? 'קוד הנחה נשמר ופעיל!' : 'קוד הנחה הוסר — אין הנחה כרגע', 'success');
+        loadCoupon();
+    } catch(e) { showStatus('שגיאה בשמירה', 'error'); }
 }
 
 // ── Courses ──

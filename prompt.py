@@ -17,8 +17,13 @@ def _coupon_section() -> str:
     try:
         code = get_coupon_code()
         if code:
+            # Get description if available
+            from database import get_section
+            desc_section = get_section("sec_coupon_desc")
+            desc = (desc_section.get("body") or "").strip() if desc_section else ""
+            desc_text = f" ({desc})" if desc else ""
             return f"""## קוד הנחה פעיל
-יש כרגע קוד הנחה פעיל: **{code}**
+יש כרגע קוד הנחה פעיל: **{code}**{desc_text}
 הציעי אותו ללקוחה כשהיא מתלבטת לגבי רכישה, או כשהיא שואלת על הנחות. אל תציעי אותו יזום בתחילת השיחה — רק כשרלוונטי."""
     except Exception:
         pass

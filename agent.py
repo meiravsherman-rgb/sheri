@@ -132,7 +132,7 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
             reply = "\n".join(collected_text).strip()
             if not reply or len(reply) <= 2:
                 logger.warning(f"Empty/short reply after tool loop. collected_text={collected_text}")
-                reply = "איך אוכל לעזור לך? 🙂"
+                reply = "איך אוכל לעזור לך?"
             append(chat_id, "assistant", reply)
             return reply
 
@@ -152,7 +152,7 @@ def handle_message(chat_id: str, sender_name: str, message_text: str) -> str:
         messages.append({"role": "user", "content": tool_results})
 
     # If we hit the iteration cap, return whatever text we collected
-    reply = "\n".join(collected_text).strip() if collected_text else "אני מטפלת בבקשה שלך. אם את צריכה עזרה נוספת, אשמח לעזור 🙂"
+    reply = "\n".join(collected_text).strip() if collected_text else "אני מטפלת בבקשה שלך. אם את צריכה עזרה נוספת, אשמח לעזור"
     append(chat_id, "assistant", reply)
     return reply
 
