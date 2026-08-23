@@ -43,6 +43,8 @@ When the user's prompt is vague or could lead to rework, ASK for clarification b
 - CRM settings (statuses, tags, sources): stored in `crm_settings` table, not hardcoded
 - Admin/CRM UI: embedded HTML in Python files (admin.py, crm.py), NOT separate React app
 - Auth: cookie-based (`admin_token=sheri2024`)
+- **Behavioral prompt**: hardcoded in `prompt.py` (BEHAVIORAL_PROMPT constant) — approved by Merav, NOT editable via admin
+- **Admin panel**: business content only (courses, FAQ, content sections, notes, docs) — no behavioral rules/feedback/questionnaire
 
 ## Supabase Connection (for DDL)
 ```python
