@@ -245,7 +245,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .login-error { color: #e74c3c; margin-top: 12px; font-size: 14px; display: none; }
 
 /* Header */
-header { background: linear-gradient(135deg, #d4838f, #e8a5b0); color: #fff; padding: 20px 24px; }
+header { background: linear-gradient(135deg, #d4838f, #e8a5b0); color: #fff; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+header a:hover { color: #fff; }
 header h1 { font-size: 22px; font-weight: 600; }
 header p { font-size: 13px; opacity: 0.9; }
 
@@ -336,8 +337,11 @@ textarea { min-height: 80px; resize: vertical; }
 
 <!-- Header -->
 <header>
-    <h1>ניהול שרי הבוטית</h1>
-    <p>ניהול מידע העסק — תוכן, קורסים, שאלות ותשובות</p>
+    <div>
+        <h1>ניהול שרי הבוטית</h1>
+        <p>ניהול מידע העסק — תוכן, קורסים, שאלות ותשובות</p>
+    </div>
+    <a href="/crm" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:.85rem;transition:all .3s">CRM &larr;</a>
 </header>
 
 <!-- Tabs -->
