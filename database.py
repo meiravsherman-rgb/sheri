@@ -210,7 +210,7 @@ def build_knowledge_base() -> str:
     parts = []
 
     # Skip keys handled elsewhere or no longer needed
-    _skip_prefixes = ("guide_", "sec_coupon_")
+    _skip_prefixes = ("guide_", "sec_coupon_", "note_")
     for s in get_all_sections():
         key = s.get("section_key", "")
         body = (s.get("body") or "").strip()

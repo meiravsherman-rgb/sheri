@@ -349,7 +349,6 @@ textarea { min-height: 80px; resize: vertical; }
     <div class="sub-tab active" onclick="switchTab('content')">תוכן ומידע</div>
     <div class="sub-tab" onclick="switchTab('courses')">קורסים ומחירים</div>
     <div class="sub-tab" onclick="switchTab('faq')">שאלות ותשובות</div>
-    <div class="sub-tab" onclick="switchTab('notes')">הערות חופשיות</div>
     <div class="sub-tab" onclick="switchTab('docs')">העלאת מסמכים</div>
 </div>
 
@@ -408,15 +407,6 @@ textarea { min-height: 80px; resize: vertical; }
     <div id="faqList"></div>
 </div>
 
-<!-- ── Free-form Notes ── -->
-<div class="section" id="sec-notes">
-    <div class="section-header">
-        <h2>הערות חופשיות</h2>
-        <button class="btn btn-add" onclick="addNote()">+ הערה חדשה</button>
-    </div>
-    <p class="section-desc">מקום חופשי להוסיף כל מידע שתרצי שהבוט ידע - טיפים, מידע על מוצרים, סיפורי לקוחות, תוכן ממסמכים, או כל דבר אחר. פשוט כתבי כותרת ותוכן.</p>
-    <div id="notesList"></div>
-</div>
 
 <!-- ── Document Upload ── -->
 <div class="section" id="sec-docs">
@@ -685,23 +675,15 @@ async function loadContent() {
 
 function renderSections() {
     const el = document.getElementById('contentList');
-    const notesEl = document.getElementById('notesList');
     const docsEl = document.getElementById('docsList');
-    // Separate: regular content, notes (note_*), uploaded docs (doc_*)
+    // Separate: regular content, uploaded docs (doc_*)
     const regular = sectionsData.filter(s => !s.section_key.startsWith('note_') && !s.section_key.startsWith('doc_') && !s.section_key.startsWith('guide_'));
-    const notes = sectionsData.filter(s => s.section_key.startsWith('note_'));
     const docs = sectionsData.filter(s => s.section_key.startsWith('doc_'));
 
     if (!regular.length) {
         el.innerHTML = '<div class="empty"><p>אין תוכן עדיין</p><button class="btn btn-add" onclick="addSection()">+ הוסיפי נושא ראשון</button></div>';
     } else {
         el.innerHTML = regular.map(s => sectionCard(s)).join('');
-    }
-
-    if (!notes.length) {
-        notesEl.innerHTML = '<div class="empty"><p>אין הערות עדיין</p><button class="btn btn-add" onclick="addNote()">+ הוסיפי הערה ראשונה</button></div>';
-    } else {
-        notesEl.innerHTML = notes.map(s => sectionCard(s)).join('');
     }
 
     if (!docs.length) {
@@ -751,12 +733,6 @@ function addSection() {
         .then(() => { showStatus('נושא חדש נוצר - מלאי את התוכן'); loadContent(); });
 }
 
-function addNote() {
-    const key = 'note_' + Date.now();
-    const data = { section_key: key, title: '', body: '' };
-    fetch(API + '/sections', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
-        .then(() => { showStatus('הערה חדשה נוצרה - מלאי את התוכן'); loadContent(); });
-}
 
 // ── Document Upload ──
 function handleDrop(e) {
