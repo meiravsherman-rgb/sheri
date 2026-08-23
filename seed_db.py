@@ -1,13 +1,9 @@
 """Seed the admin DB tables from existing knowledge-base.md and spec.json."""
 
-import json
-from pathlib import Path
 from database import (
-    init_db, upsert_faq, upsert_course, upsert_section, upsert_rule,
+    init_db, upsert_course, upsert_section,
     get_all_courses, get_all_sections,
 )
-
-BASE_DIR = Path(__file__).resolve().parent
 
 
 def seed():
@@ -72,9 +68,6 @@ def seed():
         "מייל: meiravsherman.ans@gmail.com\n"
         "מספר מירב: 050-318-9636")
 
-    upsert_section("coupon", "הנחות וקודי קופון",
-        "קוד קופון: SHERI = 36% הנחה על כל הקורסים הדיגיטליים (לכבוד השקת הבוטית).")
-
     # ── Courses ──
     courses_data = [
         {"name": "שרמן לנשים - יסודות שיטת שרמן", "price": "540₪", "audience": "להכיר את הגוף ולהקל על תסמיני הווסת", "chapters": "1-4", "purchase_url": "https://secure.cardcom.solutions/EA/EA5/ZDEWTNePuEmXz45sietjg"},
@@ -90,28 +83,9 @@ def seed():
         upsert_course(None, name=c["name"], price=c["price"], audience=c["audience"],
                       chapters=c["chapters"], purchase_url=c["purchase_url"], sort_order=i)
 
-    # ── Rules (from spec.json behavioral_rules) ──
-    spec_path = BASE_DIR / "spec.json"
-    if spec_path.exists():
-        with open(spec_path, encoding="utf-8") as f:
-            spec = json.load(f)
-        rules = spec.get("behavioral_rules", {})
-        rule_titles = {
-            "rule_1_service_guard": "שמירה שירותית",
-            "rule_2_human_intervention": "התערבות אנושית",
-            "rule_3_pain_empathy": "אמפתיה לכאב",
-            "rule_4_payment_deferral": "דחיית תשלום",
-            "rule_5_opt_in_recognition": "זיהוי מדוורות",
-            "rule_6_closure_words": "כיבוד סירוב",
-            "rule_7_active_leading": "הובלה אקטיבית",
-            "rule_8_follow_up": "פולואפ",
-        }
-        for key, body in rules.items():
-            title = rule_titles.get(key, key)
-            upsert_rule(key, title, body)
-
-    print(f"Seeded: {len(courses_data)} courses, {len(rules)} rules, 9 content sections.")
+    print(f"Seeded: {len(courses_data)} courses, 8 content sections.")
     print("FAQ is empty — Merav will add via admin panel.")
+    print("Behavioral rules are now hardcoded in prompt.py — not in DB.")
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from config import (
     WHATSAPP_PHONE_NUMBER_ID,
     WHATSAPP_VERIFY_TOKEN,
 )
-from database import init_db, is_seen, mark_seen, upsert_lead_from_message, append, seed_questionnaire
+from database import init_db, is_seen, mark_seen, upsert_lead_from_message, append
 from admin import router as admin_router
 from crm import router as crm_router
 from seed_db import seed
@@ -26,18 +26,18 @@ logger = logging.getLogger("sheri")
 
 # ── Welcome buttons (shown on first message) ─────────────────────
 WELCOME_BUTTONS = [
-    {"id": "btn_courses", "title": "הקורסים שלנו"},
-    {"id": "btn_method", "title": "מה זה שיטת שרמן?"},
-    {"id": "btn_talk", "title": "שיחה עם מירב"},
+    {"id": "btn_method", "title": "מידע ראשוני על השיטה"},
+    {"id": "btn_courses", "title": "קורסים"},
+    {"id": "btn_talk", "title": "שיחה אישית"},
 ]
 
 WELCOME_BUTTONS_TEXT = "בחרי אחת מהאפשרויות:"
 
 # Map button IDs to natural language so the agent understands intent
 BUTTON_TO_MESSAGE = {
-    "btn_courses": "אשמח לשמוע על הקורסים והמחירים",
-    "btn_method": "ספרי לי מה זו שיטת שרמן",
-    "btn_talk": "אני רוצה לדבר עם מירב",
+    "btn_method": "ספרי לי מידע ראשוני על השיטה",
+    "btn_courses": "אשמח לשמוע על הקורסים",
+    "btn_talk": "אני רוצה שיחה אישית",
 }
 
 # 14-day re-engagement template button responses (quick_reply)
@@ -61,7 +61,6 @@ async def lifespan(app: FastAPI):
     try:
         init_db()
         seed()  # Populate admin tables if empty
-        seed_questionnaire()  # Insert 18 guide questions if not exist
     except Exception as e:
         logger.warning(f"Seed/init warning: {e}")
     # Import tools to populate TOOL_REGISTRY

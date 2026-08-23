@@ -1,4 +1,8 @@
-"""Admin panel — API routes + HTML interface for Merav."""
+"""Admin panel — API routes + HTML interface for Merav.
+
+Business content only (courses, FAQ, sections, docs, coupon).
+Behavioral rules are hardcoded in prompt.py — not editable via admin.
+"""
 
 import io
 import os
@@ -12,8 +16,6 @@ from database import (
     get_all_faq, upsert_faq, delete_faq,
     get_all_courses, upsert_course, delete_course,
     get_all_sections, get_section, upsert_section, delete_section,
-    get_all_rules, upsert_rule, delete_rule,
-    _GUIDE_QUESTIONS,
 )
 from prompt import invalidate_cache
 
@@ -171,34 +173,6 @@ async def api_delete_section(section_key: str):
     return {"ok": True}
 
 
-# ── Rules API ─────────────────────────────────────────────────────
-
-class RuleRequest(BaseModel):
-    rule_key: str
-    title: str
-    body: str
-    is_active: int = 1
-
-
-@router.get("/api/rules", dependencies=[Depends(check_auth)])
-async def api_get_rules():
-    return get_all_rules()
-
-
-@router.post("/api/rules", dependencies=[Depends(check_auth)])
-async def api_upsert_rule(req: RuleRequest):
-    upsert_rule(req.rule_key, req.title, req.body, req.is_active)
-    invalidate_cache()
-    return {"ok": True}
-
-
-@router.delete("/api/rules/{rule_key}", dependencies=[Depends(check_auth)])
-async def api_delete_rule(rule_key: str):
-    delete_rule(rule_key)
-    invalidate_cache()
-    return {"ok": True}
-
-
 # ── Document Upload API ──────────────────────────────────────────
 
 def _extract_text(filename: str, content: bytes) -> str:
@@ -241,52 +215,6 @@ async def api_upload_document(file: UploadFile = File(...)):
     return {"ok": True, "section_key": section_key, "title": title, "chars": len(text)}
 
 
-# ── Questionnaire API ─────────────────────────────────────────────
-
-@router.get("/api/questionnaire", dependencies=[Depends(check_auth)])
-async def api_get_questionnaire():
-    """Return the 18 guide questions with their current answers."""
-    results = []
-    for key, question, group, storage, order in _GUIDE_QUESTIONS:
-        answer = ""
-        if storage == "rule":
-            rules = [r for r in get_all_rules() if r.get("rule_key") == key]
-            if rules:
-                answer = rules[0].get("body", "")
-        else:
-            sec = get_section(key)
-            if sec:
-                answer = sec.get("body", "")
-        results.append({
-            "question_key": key,
-            "question_text": question,
-            "group_name": group,
-            "answer": answer,
-            "sort_order": order,
-        })
-    return results
-
-
-class QuestionnaireRequest(BaseModel):
-    question_key: str
-    answer: str
-
-
-@router.post("/api/questionnaire", dependencies=[Depends(check_auth)])
-async def api_save_questionnaire(req: QuestionnaireRequest):
-    """Save a single questionnaire answer."""
-    match = [q for q in _GUIDE_QUESTIONS if q[0] == req.question_key]
-    if not match:
-        raise HTTPException(status_code=404, detail="Unknown question key")
-    key, title, group, storage, order = match[0]
-    if storage == "rule":
-        upsert_rule(key, title, req.answer, is_active=True)
-    else:
-        upsert_section(key, title, req.answer)
-    invalidate_cache()
-    return {"ok": True}
-
-
 # ── Admin HTML page ───────────────────────────────────────────────
 
 @router.get("", response_class=HTMLResponse)
@@ -321,15 +249,7 @@ header { background: linear-gradient(135deg, #d4838f, #e8a5b0); color: #fff; pad
 header h1 { font-size: 22px; font-weight: 600; }
 header p { font-size: 13px; opacity: 0.9; }
 
-/* Area selector - two main areas */
-.area-selector { display: flex; background: #fff; border-bottom: 2px solid #e8ddd5; }
-.area-btn { flex: 1; padding: 16px; cursor: pointer; font-size: 16px; font-weight: 600; color: #888; text-align: center; border-bottom: 3px solid transparent; transition: all 0.2s; }
-.area-btn:hover { color: #d4838f; background: #fef9f7; }
-.area-btn.active { color: #d4838f; border-bottom-color: #d4838f; background: #fef9f7; }
-.area-btn .area-icon { font-size: 24px; display: block; margin-bottom: 4px; }
-.area-btn .area-desc { font-size: 12px; font-weight: 400; color: #aaa; }
-
-/* Sub-tabs within each area */
+/* Tabs */
 .sub-tabs { display: flex; background: #fef9f7; border-bottom: 1px solid #e8ddd5; overflow-x: auto; }
 .sub-tab { padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: #888; white-space: nowrap; border-bottom: 2px solid transparent; transition: all 0.2s; }
 .sub-tab:hover { color: #d4838f; }
@@ -337,8 +257,6 @@ header p { font-size: 13px; opacity: 0.9; }
 
 /* Content */
 main { max-width: 900px; margin: 0 auto; padding: 20px; }
-.area { display: none; }
-.area.active { display: block; }
 .section { display: none; }
 .section.active { display: block; }
 
@@ -419,43 +337,21 @@ textarea { min-height: 80px; resize: vertical; }
 <!-- Header -->
 <header>
     <h1>ניהול שרי הבוטית</h1>
-    <p>ניהול מידע העסק וכללי ההתנהגות של הבוט</p>
+    <p>ניהול מידע העסק — תוכן, קורסים, שאלות ותשובות</p>
 </header>
 
-<!-- Two main areas -->
-<div class="area-selector">
-    <div class="area-btn active" onclick="switchArea('info')">
-        <span class="area-icon">&#128218;</span>
-        מידע על העסק
-        <span class="area-desc">תוכן, קורסים, שאלות ותשובות</span>
-    </div>
-    <div class="area-btn" onclick="switchArea('behavior')">
-        <span class="area-icon">&#9881;</span>
-        התנהגות הבוט
-        <span class="area-desc">כללים, הנחיות ומשוב</span>
-    </div>
-</div>
-
-<!-- Sub-tabs for INFO area -->
+<!-- Tabs -->
 <div class="sub-tabs" id="tabs-info">
-    <div class="sub-tab active" onclick="switchSubTab('info','content')">תוכן ומידע</div>
-    <div class="sub-tab" onclick="switchSubTab('info','courses')">קורסים ומחירים</div>
-    <div class="sub-tab" onclick="switchSubTab('info','faq')">שאלות ותשובות</div>
-    <div class="sub-tab" onclick="switchSubTab('info','notes')">הערות חופשיות</div>
-    <div class="sub-tab" onclick="switchSubTab('info','docs')">העלאת מסמכים</div>
-</div>
-
-<!-- Sub-tabs for BEHAVIOR area -->
-<div class="sub-tabs" id="tabs-behavior" style="display:none;">
-    <div class="sub-tab active" onclick="switchSubTab('behavior','rules')">כללי התנהגות</div>
-    <div class="sub-tab" onclick="switchSubTab('behavior','feedback')">משוב והערות</div>
-    <div class="sub-tab" onclick="switchSubTab('behavior','guide')">שאלון דיוק הבוט</div>
+    <div class="sub-tab active" onclick="switchTab('content')">תוכן ומידע</div>
+    <div class="sub-tab" onclick="switchTab('courses')">קורסים ומחירים</div>
+    <div class="sub-tab" onclick="switchTab('faq')">שאלות ותשובות</div>
+    <div class="sub-tab" onclick="switchTab('notes')">הערות חופשיות</div>
+    <div class="sub-tab" onclick="switchTab('docs')">העלאת מסמכים</div>
 </div>
 
 <main>
 
-<!-- ═══════════ INFO AREA ═══════════ -->
-<div class="area active" id="area-info">
+<!-- ═══════════ CONTENT AREA ═══════════ -->
 
 <!-- ── Content Sections ── -->
 <div class="section active" id="sec-content">
@@ -531,42 +427,6 @@ textarea { min-height: 80px; resize: vertical; }
     <div id="docsList"></div>
 </div>
 
-</div><!-- /area-info -->
-
-<!-- ═══════════ BEHAVIOR AREA ═══════════ -->
-<div class="area" id="area-behavior">
-
-<!-- ── Rules ── -->
-<div class="section active" id="sec-rules">
-    <div class="section-header">
-        <h2>כללי התנהגות</h2>
-        <button class="btn btn-add" onclick="addRule()">+ כלל חדש</button>
-    </div>
-    <p class="section-desc">כללים שמנחים את הבוט איך לענות. למשל: "לא להבטיח תוצאות", "להפנות למירב בשאלות רפואיות" וכו'. ניתן להפעיל ולכבות כל כלל.</p>
-    <div id="rulesList"></div>
-</div>
-
-<!-- ── Feedback ── -->
-<div class="section" id="sec-feedback">
-    <div class="section-header">
-        <h2>משוב והערות</h2>
-        <button class="btn btn-add" onclick="addFeedback()">+ הערה חדשה</button>
-    </div>
-    <p class="section-desc">כתבי כאן דברים שאהבת בהתנהגות הבוט, דברים שלא אהבת, או הנחיות ספציפיות כמו: "להיות יותר אישית", "לא לכתוב הודעות ארוכות" וכו'. כל מה שתכתבי כאן ישפיע על אופן התגובה של הבוט.</p>
-    <div id="feedbackList"></div>
-</div>
-
-<!-- ── Questionnaire (Guide) ── -->
-<div class="section" id="sec-guide">
-    <div class="section-header">
-        <h2>שאלון דיוק הבוט</h2>
-        <button class="btn btn-primary" onclick="saveAllGuide()">שמור הכל</button>
-    </div>
-    <p class="section-desc">18 שאלות שעוזרות לדייק את ההתנהגות של שרי. ענו על כמה שתרצו — כל תשובה תשפר את הבוט. אין חובה לענות על הכל בבת אחת. נסו קודם כמה שיחות בסימולטור ואז חזרו לענות.</p>
-    <div id="guideList"></div>
-</div>
-
-</div><!-- /area-behavior -->
 
 </main>
 
@@ -574,7 +434,6 @@ textarea { min-height: 80px; resize: vertical; }
 
 <script>
 const API = '/admin/api';
-let currentArea = 'info';
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -621,23 +480,11 @@ fetch(API + '/faq').then(r => {
     }, 3000);
 });
 
-// ── Area switching ──
-function switchArea(area) {
-    currentArea = area;
-    document.querySelectorAll('.area-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.area').forEach(a => a.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-    document.getElementById('area-' + area).classList.add('active');
-    // Toggle sub-tabs
-    document.getElementById('tabs-info').style.display = area === 'info' ? 'flex' : 'none';
-    document.getElementById('tabs-behavior').style.display = area === 'behavior' ? 'flex' : 'none';
-}
-
-function switchSubTab(area, tab) {
-    const areaEl = document.getElementById('area-' + area);
-    const tabsEl = document.getElementById('tabs-' + area);
+// ── Tab switching ──
+function switchTab(tab) {
+    const tabsEl = document.getElementById('tabs-info');
     tabsEl.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-    areaEl.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     event.currentTarget.classList.add('active');
     document.getElementById('sec-' + tab).classList.add('active');
 }
@@ -652,7 +499,7 @@ function showStatus(msg, type='success') {
 }
 
 // ── Load all ──
-function loadAll() { loadCourses(); loadFaq(); loadContent(); loadRules(); loadFeedback(); loadGuide(); loadCoupon(); }
+function loadAll() { loadCourses(); loadFaq(); loadContent(); loadCoupon(); }
 
 // ── Coupon Code ──
 async function loadCoupon() {
@@ -675,9 +522,9 @@ async function saveCoupon() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({section_key: 'sec_coupon_code', title: 'קוד הנחה פעיל', body: code})
         });
-        if (res.ok) statusMsg('קוד הנחה נשמר!', 'success');
-        else statusMsg('שגיאה בשמירה', 'error');
-    } catch(e) { statusMsg('שגיאה', 'error'); }
+        if (res.ok) showStatus('קוד הנחה נשמר!', 'success');
+        else showStatus('שגיאה בשמירה', 'error');
+    } catch(e) { showStatus('שגיאה', 'error'); }
 }
 
 // ── Courses ──
@@ -882,120 +729,6 @@ function addNote() {
         .then(() => { showStatus('הערה חדשה נוצרה - מלאי את התוכן'); loadContent(); });
 }
 
-// ── Rules ──
-async function loadRules() {
-    const el = document.getElementById('rulesList');
-    try {
-    const res = await fetch(API + '/rules');
-    if (!res.ok) { el.innerHTML = '<div class="empty"><p>שגיאה בטעינת כללים</p><button class="btn btn-add" onclick="loadRules()">נסי שוב</button></div>'; return; }
-    const data = await res.json();
-    // Filter out feedback rules
-    const realRules = data.filter(r => !r.rule_key.startsWith('feedback_') && !r.rule_key.startsWith('guide_'));
-    if (!realRules.length) {
-        el.innerHTML = '<div class="empty"><p>אין כללים עדיין</p><button class="btn btn-add" onclick="addRule()">+ הוסיפי כלל ראשון</button></div>';
-        return;
-    }
-    el.innerHTML = realRules.map(r => `
-        <div class="card">
-            <div class="card-header">
-                <h3>${esc(r.title) || '(ללא שם)'}</h3>
-                <div>
-                    <button class="btn btn-save" onclick="saveRule('${r.rule_key}')">שמור</button>
-                    <button class="btn btn-danger" onclick="deleteRule('${r.rule_key}')">מחק</button>
-                </div>
-            </div>
-            <label>שם הכלל</label>
-            <input type="text" id="rt-${r.rule_key}" value="${esc(r.title)}">
-            <label>תיאור</label>
-            <textarea id="rb-${r.rule_key}">${esc(r.body)}</textarea>
-            <div class="toggle" style="margin-top:12px;">
-                <input type="checkbox" id="ra-${r.rule_key}" ${r.is_active ? 'checked' : ''}>
-                <label for="ra-${r.rule_key}" style="margin:0;font-weight:normal;">כלל פעיל</label>
-            </div>
-        </div>
-    `).join('');
-    } catch(e) { console.error('loadRules error:', e); el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadRules()">נסי שוב</button></div>'; }
-}
-
-async function saveRule(key) {
-    const data = {
-        rule_key: key, title: val('rt-'+key), body: val('rb-'+key),
-        is_active: document.getElementById('ra-'+key).checked ? 1 : 0
-    };
-    const res = await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-    if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
-    showStatus('הכלל נשמר');
-    loadRules();
-}
-
-async function deleteRule(key) {
-    if (!confirm('למחוק את הכלל הזה?')) return;
-    await fetch(API + '/rules/' + key, {method:'DELETE'});
-    showStatus('הכלל נמחק');
-    loadRules();
-}
-
-function addRule() {
-    const key = 'rule_' + Date.now();
-    const data = { rule_key: key, title: '', body: '', is_active: 1 };
-    fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
-        .then(() => { showStatus('כלל חדש נוצר - מלאי את הפרטים'); loadRules(); });
-}
-
-// ── Feedback (stored as rules with feedback_ prefix) ──
-async function loadFeedback() {
-    const el = document.getElementById('feedbackList');
-    try {
-    const res = await fetch(API + '/rules');
-    if (!res.ok) { el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadFeedback()">נסי שוב</button></div>'; return; }
-    const data = await res.json();
-    const feedbackItems = data.filter(r => r.rule_key.startsWith('feedback_'));
-    if (!feedbackItems.length) {
-        el.innerHTML = '<div class="empty"><p>אין משוב עדיין</p><button class="btn btn-add" onclick="addFeedback()">+ הוסיפי הערה ראשונה</button></div>';
-        return;
-    }
-    el.innerHTML = feedbackItems.map(r => `
-        <div class="card">
-            <div class="card-header">
-                <h3>${esc(r.title) || '(ללא כותרת)'}</h3>
-                <div>
-                    <button class="btn btn-save" onclick="saveFeedback('${r.rule_key}')">שמור</button>
-                    <button class="btn btn-danger" onclick="deleteFeedback('${r.rule_key}')">מחק</button>
-                </div>
-            </div>
-            <label>כותרת (למשל: "דברים שאהבתי", "דברים לשנות", "הנחיה")</label>
-            <input type="text" id="ft-${r.rule_key}" value="${esc(r.title)}">
-            <label>תוכן</label>
-            <textarea id="fb-${r.rule_key}" rows="4">${esc(r.body)}</textarea>
-        </div>
-    `).join('');
-    } catch(e) { console.error('loadFeedback error:', e); el.innerHTML = '<div class="empty"><p>שגיאה בטעינה</p><button class="btn btn-add" onclick="loadFeedback()">נסי שוב</button></div>'; }
-}
-
-function addFeedback() {
-    const key = 'feedback_' + Date.now();
-    const data = { rule_key: key, title: '', body: '', is_active: 1 };
-    fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
-        .then(() => { showStatus('הערת משוב חדשה נוצרה'); loadFeedback(); });
-}
-
-async function saveFeedback(key) {
-    const data = {
-        rule_key: key, title: val('ft-'+key), body: val('fb-'+key), is_active: 1
-    };
-    const res = await fetch(API + '/rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-    if (!res.ok) { showStatus('שגיאה בשמירה', 'error'); return; }
-    showStatus('המשוב נשמר');
-    loadFeedback();
-}
-
-async function deleteFeedback(key) {
-    if (!confirm('למחוק את ההערה?')) return;
-    await fetch(API + '/rules/' + key, {method:'DELETE'});
-    showStatus('ההערה נמחקה');
-    loadFeedback();
-}
-
 // ── Document Upload ──
 function handleDrop(e) {
     e.preventDefault();
@@ -1026,64 +759,6 @@ async function uploadFile(file) {
     } catch(e) {
         statusEl.innerHTML = '<p style="color:#c62828;">שגיאה: ' + esc(e.message) + '</p>';
     }
-}
-
-// ── Questionnaire (Guide) ──
-let guideData = [];
-
-async function loadGuide() {
-    try {
-        const res = await fetch(API + '/questionnaire');
-        if (!res.ok) { console.error('loadGuide failed:', res.status); return; }
-        guideData = await res.json();
-        renderGuide();
-    } catch(e) { console.error('loadGuide error:', e); }
-}
-
-function renderGuide() {
-    const el = document.getElementById('guideList');
-    if (!guideData.length) {
-        el.innerHTML = '<div class="empty"><p>השאלון טרם הוגדר</p></div>';
-        return;
-    }
-    const groupOrder = ['טון ושפה', 'תוכן וידע', 'משפך שיווקי', 'העברה לנציג', 'כללי'];
-    const groups = {};
-    guideData.forEach(q => {
-        if (!groups[q.group_name]) groups[q.group_name] = [];
-        groups[q.group_name].push(q);
-    });
-    let html = '';
-    groupOrder.forEach(g => {
-        if (!groups[g]) return;
-        html += '<h3 style="margin:24px 0 12px;color:#d4838f;font-size:16px;">' + esc(g) + '</h3>';
-        groups[g].forEach(q => {
-            const has = q.answer && q.answer.trim();
-            html += '<div class="card" style="border-right:4px solid ' + (has ? '#4caf50' : '#e8ddd5') + ';">'
-                + '<label style="font-size:14px;font-weight:600;color:#444;">' + esc(q.question_text) + '</label>'
-                + '<textarea id="gq-' + q.question_key + '" rows="3" placeholder="ענו כאן..." style="margin-top:8px;">' + esc(q.answer || '') + '</textarea>'
-                + '</div>';
-        });
-    });
-    el.innerHTML = html;
-}
-
-async function saveAllGuide() {
-    let saved = 0;
-    for (const q of guideData) {
-        const ta = document.getElementById('gq-' + q.question_key);
-        if (!ta) continue;
-        const newVal = ta.value;
-        if (newVal !== (q.answer || '')) {
-            await fetch(API + '/questionnaire', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({question_key: q.question_key, answer: newVal})
-            });
-            saved++;
-        }
-    }
-    showStatus(saved > 0 ? 'נשמרו ' + saved + ' תשובות והבוט עודכן' : 'אין שינויים לשמור');
-    loadGuide();
 }
 
 // ── Doc list ──
