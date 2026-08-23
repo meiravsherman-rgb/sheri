@@ -44,7 +44,9 @@ When the user's prompt is vague or could lead to rework, ASK for clarification b
 - Admin/CRM UI: embedded HTML in Python files (admin.py, crm.py), NOT separate React app
 - Auth: cookie-based (`admin_token=sheri2024`)
 - **Behavioral prompt**: hardcoded in `prompt.py` (BEHAVIORAL_PROMPT constant) — approved by Merav, NOT editable via admin
-- **Admin panel**: business content only (courses, FAQ, content sections, notes, docs) — no behavioral rules/feedback/questionnaire
+- **Admin panel**: business content only (courses, FAQ, content sections, docs, coupon) — no behavioral rules/notes/questionnaire
+- **CRM**: redesigned with sidebar nav, green/gold palette, drawer panel for lead details, mobile tab bar
+- **Knowledge base filter**: `note_*`, `guide_*`, `sec_coupon_*` prefixed sections excluded from bot prompt
 
 ## Supabase Connection (for DDL)
 ```python
