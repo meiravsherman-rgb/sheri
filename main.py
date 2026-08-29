@@ -195,7 +195,7 @@ CARDCOM_PRODUCT_MAP = {
 
 class CardcomProduct(BaseModel):
     id: str | None = None
-    price: float | None = None
+    price: str | float | None = None
 
 
 class CardcomWebhook(BaseModel):
@@ -217,8 +217,18 @@ async def cardcom_webhook(payload: CardcomWebhook):
     if not payload.phone:
         return {"status": "error", "message": "missing phone"}
 
-    # Filter empty/null products and normalize IDs to uppercase
-    products = [p for p in payload.products if p.id and p.id.strip()]
+    # Filter empty/null products, parse price strings, normalize IDs
+    def _parse_price(val) -> float:
+        if val is None or val == "" or val == "null":
+            return 0
+        try:
+            return float(str(val).replace(",", "").replace("₪", "").strip())
+        except (ValueError, TypeError):
+            return 0
+
+    products = [p for p in payload.products if p.id and str(p.id).strip()]
+    for p in products:
+        p.price = _parse_price(p.price)
     if not products:
         return {"status": "error", "message": "no products"}
 
