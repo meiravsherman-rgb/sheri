@@ -194,16 +194,16 @@ CARDCOM_PRODUCT_MAP = {
 
 
 class CardcomProduct(BaseModel):
-    id: str = ""
-    price: float = 0
+    id: str | None = None
+    price: float | None = None
 
 
 class CardcomWebhook(BaseModel):
     secret: str
     phone: str
-    name: str = ""
-    email: str = ""
-    amount: float = 0
+    name: str | None = ""
+    email: str | None = ""
+    amount: float | None = 0
     products: list[CardcomProduct] = []
 
 
@@ -217,7 +217,7 @@ async def cardcom_webhook(payload: CardcomWebhook):
     if not payload.phone:
         return {"status": "error", "message": "missing phone"}
 
-    # Filter empty products and normalize IDs to uppercase
+    # Filter empty/null products and normalize IDs to uppercase
     products = [p for p in payload.products if p.id and p.id.strip()]
     if not products:
         return {"status": "error", "message": "no products"}
@@ -226,15 +226,16 @@ async def cardcom_webhook(payload: CardcomWebhook):
     expanded = []
     for p in products:
         pid = p.id.strip().upper()
+        price = p.price or 0
         if pid == "SH.FULL":
-            per_course = p.price / 3 if p.price else 0
+            per_course = price / 3 if price else 0
             expanded.append({"code": "SH.BASICS", "name": CARDCOM_PRODUCT_MAP["SH.BASICS"], "price": per_course})
             expanded.append({"code": "SH.PAIN.RELIEF", "name": CARDCOM_PRODUCT_MAP["SH.PAIN.RELIEF"], "price": per_course})
             expanded.append({"code": "SH.PMP", "name": CARDCOM_PRODUCT_MAP["SH.PMP"], "price": per_course})
         else:
             name = CARDCOM_PRODUCT_MAP.get(pid)
             if name:
-                expanded.append({"code": pid, "name": name, "price": p.price})
+                expanded.append({"code": pid, "name": name, "price": price})
             else:
                 logger.warning(f"Cardcom webhook: unknown product ID '{pid}'")
 
@@ -250,8 +251,8 @@ async def cardcom_webhook(payload: CardcomWebhook):
     from tools.whatsapp import send_purchase_confirmation, alert_purchase
 
     phone = normalize_phone(payload.phone)
-    customer_name = payload.name.strip() or "לקוחה"
-    total_amount = payload.amount
+    customer_name = (payload.name or "").strip() or "לקוחה"
+    total_amount = payload.amount or 0
 
     # Upsert lead
     try:
