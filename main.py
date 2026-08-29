@@ -182,6 +182,117 @@ async def simulator():
     return Response(content="Simulator not found", status_code=404)
 
 
+# ── Cardcom payment webhook (via Make) ─────────────────────────────
+
+CARDCOM_SECRET = "sheri_cardcom_2026"
+
+CARDCOM_PRODUCT_MAP = {
+    "SH.BASICS": "קורס יסודות",
+    "SH.PAIN.RELIEF": "קורס הקלה בכאב",
+    "SH.PMP": "הקלה בתופעות קדם וסתיות",
+}
+
+
+class CardcomProduct(BaseModel):
+    id: str = ""
+    price: float = 0
+
+
+class CardcomWebhook(BaseModel):
+    secret: str
+    phone: str
+    name: str = ""
+    email: str = ""
+    amount: float = 0
+    products: list[CardcomProduct] = []
+
+
+@app.post("/webhook/cardcom")
+async def cardcom_webhook(payload: CardcomWebhook):
+    """Receive payment notification from Cardcom via Make."""
+    if payload.secret != CARDCOM_SECRET:
+        logger.warning("Cardcom webhook: invalid secret")
+        return Response(content="Forbidden", status_code=403)
+
+    if not payload.phone:
+        return {"status": "error", "message": "missing phone"}
+
+    # Filter empty products and normalize IDs to uppercase
+    products = [p for p in payload.products if p.id and p.id.strip()]
+    if not products:
+        return {"status": "error", "message": "no products"}
+
+    # Expand SH.FULL to all 3 courses (split price equally)
+    expanded = []
+    for p in products:
+        pid = p.id.strip().upper()
+        if pid == "SH.FULL":
+            per_course = p.price / 3 if p.price else 0
+            expanded.append({"code": "SH.BASICS", "name": CARDCOM_PRODUCT_MAP["SH.BASICS"], "price": per_course})
+            expanded.append({"code": "SH.PAIN.RELIEF", "name": CARDCOM_PRODUCT_MAP["SH.PAIN.RELIEF"], "price": per_course})
+            expanded.append({"code": "SH.PMP", "name": CARDCOM_PRODUCT_MAP["SH.PMP"], "price": per_course})
+        else:
+            name = CARDCOM_PRODUCT_MAP.get(pid)
+            if name:
+                expanded.append({"code": pid, "name": name, "price": p.price})
+            else:
+                logger.warning(f"Cardcom webhook: unknown product ID '{pid}'")
+
+    courses = expanded
+
+    if not courses:
+        return {"status": "error", "message": "no valid products"}
+
+    from database import (
+        normalize_phone, create_purchase, upsert_lead_from_message,
+        update_lead, log_lead_event,
+    )
+    from tools.whatsapp import send_purchase_confirmation, alert_purchase
+
+    phone = normalize_phone(payload.phone)
+    customer_name = payload.name.strip() or "לקוחה"
+    total_amount = payload.amount
+
+    # Upsert lead
+    try:
+        upsert_lead_from_message(phone, customer_name, source="Cardcom")
+    except Exception as e:
+        logger.warning(f"Cardcom webhook: failed to upsert lead: {e}")
+
+    # Create purchases + log events
+    course_names = []
+    for c in courses:
+        try:
+            create_purchase(phone, c["name"], amount=c["price"], payment_method="cardcom",
+                            notes=f"Cardcom product: {c['code']}")
+            log_lead_event(phone, "purchase", {"course": c["name"], "source": "cardcom",
+                                               "product_id": c["code"], "amount": c["price"]})
+            course_names.append(c["name"])
+        except Exception as e:
+            logger.error(f"Cardcom webhook: failed to create purchase for {c['code']}: {e}")
+
+    # Update lead status
+    try:
+        update_lead(phone, status="לקוחה")
+    except Exception as e:
+        logger.warning(f"Cardcom webhook: failed to update lead status: {e}")
+
+    # Send WhatsApp confirmation to customer
+    try:
+        send_purchase_confirmation(phone, customer_name)
+    except Exception as e:
+        logger.warning(f"Cardcom webhook: failed to send confirmation: {e}")
+
+    # Alert Merav
+    try:
+        alert_purchase(customer_name, " + ".join(course_names), total_amount)
+    except Exception as e:
+        logger.warning(f"Cardcom webhook: failed to alert Merav: {e}")
+
+    logger.info(f"Cardcom webhook: {customer_name} ({phone}) purchased {course_names}")
+    return {"status": "ok", "courses": course_names}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": 1, "bot": "שרי הבוטית"}
