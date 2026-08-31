@@ -168,7 +168,9 @@ async def api_conversations(phone: str, limit: int = 1000):
 
 @router.get("/api/purchases", dependencies=[Depends(check_auth)])
 async def api_all_purchases(lead_phone: str = ""):
-    purchases = get_purchases(lead_phone)
+    from database import normalize_phone
+    phone_filter = normalize_phone(lead_phone) if lead_phone else ""
+    purchases = get_purchases(phone_filter)
     for p in purchases:
         p["lead_phone"] = display_phone(p.get("lead_phone", ""))
     return purchases

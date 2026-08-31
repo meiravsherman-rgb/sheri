@@ -399,6 +399,7 @@ def get_lead_conversations(phone: str, limit: int = 1000) -> list[dict]:
 def create_purchase(lead_phone: str, course_name: str, amount: float,
                     course_id: int = None, payment_method: str = "cardcom",
                     notes: str = "") -> int:
+    lead_phone = normalize_phone(lead_phone)
     now = _now()
     data = {
         "lead_phone": lead_phone, "course_name": course_name, "amount": amount,
