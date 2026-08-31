@@ -421,6 +421,37 @@ def get_lead_conversations(phone: str, limit: int = 1000) -> list[dict]:
     return list(reversed(r.json()))
 
 
+def get_active_conversations() -> list[dict]:
+    """Get leads with conversations in the last 24 hours (active WhatsApp window)."""
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+
+    # Get leads with recent activity
+    r = httpx.get(_url("leads"), headers=_get_headers(), params={
+        "select": "phone,name,last_contact,status,ai_summary",
+        "last_contact": f"gte.{cutoff}",
+        "order": "last_contact.desc",
+    })
+    r.raise_for_status()
+    leads = r.json()
+
+    # Get last message for each lead
+    for lead in leads:
+        phone = lead["phone"]
+        msgs = httpx.get(_url("conversations"), headers=_get_headers(), params={
+            "select": "role,content,created_at",
+            "chat_id": f"eq.{phone}",
+            "order": "id.desc",
+            "limit": "1",
+        })
+        msgs.raise_for_status()
+        msg_data = msgs.json()
+        lead["last_message"] = msg_data[0] if msg_data else None
+        lead["phone_display"] = display_phone(phone)
+
+    return leads
+
+
 # ── Purchases ──────────────────────────────────────────────────────
 
 def create_purchase(lead_phone: str, course_name: str, amount: float,

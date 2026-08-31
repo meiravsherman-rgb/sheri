@@ -239,6 +239,27 @@ async def api_highlights():
     return get_highlights()
 
 
+@router.get("/api/whatsapp/active", dependencies=[Depends(check_auth)])
+async def api_whatsapp_active():
+    from database import get_active_conversations
+    return get_active_conversations()
+
+
+class WhatsAppSend(BaseModel):
+    phone: str
+    message: str
+
+
+@router.post("/api/whatsapp/send", dependencies=[Depends(check_auth)])
+async def api_whatsapp_send(req: WhatsAppSend):
+    from database import normalize_phone, append
+    from tools.whatsapp import send_reply
+    phone = normalize_phone(req.phone)
+    send_reply(phone, req.message)
+    append(phone, "assistant", req.message)
+    return {"ok": True}
+
+
 # ── HTML Page ──────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
@@ -507,6 +528,21 @@ a { color: inherit; text-decoration: none; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--ink); color: #fff; padding: 10px 24px; border-radius: 14px; z-index: 200; font-size: 13px; font-weight: 700; box-shadow: var(--shadow-lg); transition: transform .3s cubic-bezier(.4,0,.2,1); }
 .toast.visible { transform: translateX(-50%) translateY(0); }
 
+/* WhatsApp tab */
+.wa-list .wa-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border-2); cursor: pointer; transition: .18s; }
+.wa-list .wa-item:hover { background: var(--green-soft); }
+.wa-item .wa-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; flex-shrink: 0; }
+.wa-item .wa-info { flex: 1; min-width: 0; }
+.wa-item .wa-name { font-weight: 700; font-size: 14px; }
+.wa-item .wa-last-msg { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wa-item .wa-time { font-size: 11px; color: var(--muted-2); font-weight: 600; white-space: nowrap; }
+.wa-chat { display: flex; flex-direction: column; height: calc(100vh - 100px); }
+.wa-chat-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--card); }
+.wa-chat-messages { flex: 1; overflow-y: auto; padding: 16px; background: #e5ddd5; }
+.wa-chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--card); }
+.wa-chat-input input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 20px; font-family: inherit; font-size: 13px; }
+.wa-chat-input input:focus { outline: none; border-color: var(--green); }
+
 /* Empty state */
 .empty-state { text-align: center; padding: 40px 16px; color: var(--muted); }
 .empty-state .icon { font-size: 2.5rem; margin-bottom: 8px; }
@@ -619,6 +655,23 @@ a { color: inherit; text-decoration: none; }
     </div>
     <button class="btn btn-pink" style="margin-top:16px" onclick="saveSettings()">שמור הגדרות</button>
   </div>
+
+  <!-- WhatsApp -->
+  <div id="tab-whatsapp" class="view">
+    <div id="waList" class="wa-list"></div>
+    <div id="waChat" class="wa-chat" style="display:none">
+      <div class="wa-chat-header">
+        <button class="btn btn-outline btn-small" onclick="showWaList()" style="margin-inline-end:12px">&#x2190; חזרה</button>
+        <span id="waChatName" style="font-weight:700;font-size:15px"></span>
+        <button class="btn btn-outline btn-small" style="margin-inline-start:auto" onclick="openLead(waChatPhone)">פרטים</button>
+      </div>
+      <div class="wa-chat-messages" id="waChatMessages"></div>
+      <div class="wa-chat-input">
+        <input type="text" id="waMessageInput" placeholder="הקלד הודעה..." onkeydown="if(event.key==='Enter')sendWaMessage()">
+        <button class="btn btn-green" onclick="sendWaMessage()">שלח</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Sidebar -->
@@ -635,6 +688,10 @@ a { color: inherit; text-decoration: none; }
   <button class="nav-item" onclick="showTab('leads',this)">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     לידים
+  </button>
+  <button class="nav-item" onclick="showTab('whatsapp',this)">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    WhatsApp
   </button>
   <button class="nav-item" onclick="showTab('purchases',this)">
     <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
@@ -663,6 +720,10 @@ a { color: inherit; text-decoration: none; }
   <div class="tab" onclick="showTabMobile('leads',this)">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
     לידים
+  </div>
+  <div class="tab" onclick="showTabMobile('whatsapp',this)">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    WhatsApp
   </div>
   <div class="tab" onclick="showTabMobile('purchases',this)">
     <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
@@ -757,6 +818,7 @@ function showTab(tab, navBtn) {
   currentTab = tab;
   if (tab==='dashboard') loadDashboard();
   if (tab==='leads') loadLeads();
+  if (tab==='whatsapp') loadWhatsApp();
   if (tab==='purchases') loadPurchases();
   if (tab==='settings') renderSettings();
 }
@@ -1330,6 +1392,72 @@ async function saveSettings() {
   ]);
   populateFilters();
   toast('הגדרות נשמרו!');
+}
+
+// WhatsApp
+let waChatPhone = '';
+
+async function loadWhatsApp() {
+  document.getElementById('waChat').style.display = 'none';
+  document.getElementById('waList').style.display = 'block';
+  const convos = await apiFetch('/whatsapp/active');
+  if (convos === null) return;
+  document.getElementById('waList').innerHTML = convos.length ? convos.map(c => {
+    const lastMsg = c.last_message;
+    const msgPreview = lastMsg ? escapeHtml((lastMsg.content || '').slice(0, 60)) : '';
+    const msgTime = lastMsg ? fmtDate(lastMsg.created_at) : fmtDate(c.last_contact);
+    const displayName = escapeHtml(c.name || c.phone_display);
+    const displayPhone = escapeHtml(c.phone_display);
+    return '<div class="wa-item" onclick="openWaChat(' + "'" + displayPhone + "','" + displayName + "'" + ')">'
+      + '<div class="wa-avatar" style="background:' + getAvatarColor(c.name) + '">' + escapeHtml(getInitials(c.name)) + '</div>'
+      + '<div class="wa-info"><div class="wa-name">' + displayName + '</div><div class="wa-last-msg">' + msgPreview + '</div></div>'
+      + '<div class="wa-time">' + msgTime + '</div>'
+      + '</div>';
+  }).join('') : '<div class="empty-state"><div class="icon">&#x1F4AC;</div><p>אין שיחות פעילות (24 שעות)</p></div>';
+}
+
+async function openWaChat(phone, name) {
+  waChatPhone = phone;
+  document.getElementById('waChatName').textContent = name;
+  document.getElementById('waList').style.display = 'none';
+  document.getElementById('waChat').style.display = 'flex';
+  const convos = await apiFetch('/leads/' + encodeURIComponent(phone) + '/conversations?limit=50');
+  const container = document.getElementById('waChatMessages');
+  if (convos && convos.length) {
+    container.innerHTML = convos.map(m =>
+      '<div class="chat-msg ' + m.role + '"><div>' + escapeHtml(m.content) + '</div><div class="time">' + fmtDate(m.created_at) + '</div></div>'
+    ).join('');
+  } else {
+    container.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4AC;</div><p>אין הודעות</p></div>';
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function showWaList() {
+  document.getElementById('waList').style.display = 'block';
+  document.getElementById('waChat').style.display = 'none';
+  loadWhatsApp();
+}
+
+async function sendWaMessage() {
+  const input = document.getElementById('waMessageInput');
+  const message = input.value.trim();
+  if (!message || !waChatPhone) return;
+  input.value = '';
+  input.disabled = true;
+  const res = await apiFetch('/whatsapp/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({phone: waChatPhone, message: message})
+  });
+  if (res && res.ok) {
+    toast('הודעה נשלחה!');
+    openWaChat(waChatPhone, document.getElementById('waChatName').textContent);
+  } else {
+    toast('שגיאה בשליחה');
+  }
+  input.disabled = false;
+  input.focus();
 }
 </script>
 </body>
