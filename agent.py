@@ -20,6 +20,7 @@ FRAMEWORK_INJECTED_CHAT_ID = {
     "set_marketing_opt_in",
     "track_link_sent",
     "update_lead_score",
+    "tag_lead",
 }
 
 _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)

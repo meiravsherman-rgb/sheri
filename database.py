@@ -348,6 +348,28 @@ def update_lead(phone: str, **fields) -> None:
     httpx.patch(_url("leads"), headers=_get_headers(), params={"phone": f"eq.{phone}"}, json=fields).raise_for_status()
 
 
+def add_tag_to_lead(phone: str, tag: str) -> None:
+    """Add a tag to a lead's tags array if not already present."""
+    phone = normalize_phone(phone)
+    lead = get_lead(phone)
+    if not lead:
+        return
+    tags = lead.get("tags") or []
+    if tag not in tags:
+        tags.append(tag)
+        update_lead(phone, tags=tags)
+
+
+def auto_create_tag_setting(tag: str) -> None:
+    """Ensure a tag exists in CRM settings. Creates it with default color if missing."""
+    settings = get_crm_settings()
+    existing_tags = settings.get("tags") or []
+    if any(t.get("key") == tag for t in existing_tags):
+        return
+    existing_tags.append({"key": tag, "color": "#95a5a6"})
+    update_crm_setting("tags", existing_tags)
+
+
 def create_lead_manual(phone: str, name: str, source: str = "manual") -> None:
     phone = normalize_phone(phone)
     now = _now()

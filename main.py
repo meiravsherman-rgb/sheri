@@ -66,6 +66,7 @@ async def lifespan(app: FastAPI):
     # Import tools to populate TOOL_REGISTRY
     import tools.human_handoff  # noqa: F401
     import tools.marketing  # noqa: F401
+    import tools.tagging  # noqa: F401
     try:
         import tools.reminders  # noqa: F401
         from tools.reminders import start_scheduler
