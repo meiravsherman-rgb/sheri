@@ -922,13 +922,14 @@ async function loadDashboard() {
   const highlights = await apiFetch('/highlights');
   if (highlights) {
     document.getElementById('highlightsList').innerHTML = highlights.length ? highlights.map(e => {
-      const data = typeof e.event_data === 'string' ? JSON.parse(e.event_data || '{}') : (e.event_data || {});
+      let data = {};
+      try { data = typeof e.event_data === 'string' ? JSON.parse(e.event_data || '{}') : (e.event_data || {}); } catch(x) {}
       const name = escapeHtml(e.lead_name || e.lead_phone_display || '');
       const phone = escapeHtml(e.lead_phone_display || '');
       let icon = '', text = '';
       if (e.event_type === 'purchase') {
         icon = '💰';
-        text = '<b>' + name + '</b> רכשה "' + escapeHtml(data.course || '') + '" — ' + (data.amount || '') + '₪';
+        text = '<b>' + name + '</b> רכשה "' + escapeHtml(data.course || '') + '" — ' + escapeHtml(String(data.amount || '')) + '₪';
       } else if (e.event_type === 'new_lead') {
         icon = '👤';
         text = 'ליד חדש: <b>' + name + '</b> (' + phone + ')';
