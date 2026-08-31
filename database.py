@@ -322,7 +322,9 @@ def get_leads(status: str = "", search: str = "", tag: str = "") -> list[dict]:
     if status:
         params["status"] = f"eq.{status}"
     if search:
-        params["or"] = f"(name.ilike.%{search}%,phone.ilike.%{search}%)"
+        # Normalize phone search: 05... → 972... for DB match
+        phone_search = normalize_phone(search) if search.replace("-", "").replace(" ", "").startswith("05") else search
+        params["or"] = f"(name.ilike.%{search}%,phone.ilike.%{phone_search}%)"
     if tag:
         params["tags"] = f"cs.{{{tag}}}"
     r = httpx.get(_url("leads"), headers=_get_headers(), params=params)

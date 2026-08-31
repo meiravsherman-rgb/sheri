@@ -527,10 +527,7 @@ a { color: inherit; text-decoration: none; }
 <div class="main">
   <div class="topbar">
     <h1>CRM שיטת שרמן<small>ניהול לידים ומעקב לקוחות</small></h1>
-    <div class="search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" id="globalSearch" placeholder="חיפוש..." oninput="if(currentTab==='leads')loadLeads()">
-    </div>
+    <div class="search"></div>
   </div>
 
   <!-- Dashboard -->
@@ -900,9 +897,7 @@ function activityDot(lastContact) {
 
 // Leads
 async function loadLeads() {
-  const globalVal = document.getElementById('globalSearch')?.value||'';
-  const localVal = document.getElementById('searchInput')?.value||'';
-  const search = localVal || globalVal;
+  const search = document.getElementById('searchInput')?.value||'';
   const status = document.getElementById('statusFilter')?.value||'';
   const tag = document.getElementById('tagFilter')?.value||'';
   const leads = await apiFetch(`/leads?search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&tag=${encodeURIComponent(tag)}`);
