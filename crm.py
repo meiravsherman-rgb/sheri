@@ -1168,13 +1168,14 @@ async function loadPurchases() {
   document.getElementById('purchasesTable').innerHTML = purchases.length ? `
     <div style="padding:14px 16px;font-weight:800;font-size:15px;border-bottom:1px solid var(--border)">סה"כ: ${total.toLocaleString()}₪ <span style="color:var(--muted);font-weight:500;font-size:13px">(${purchases.length} רכישות)</span></div>
     <table>
-    <tr><th>טלפון</th><th>קורס</th><th>סכום</th><th>תאריך</th><th>אמצעי</th></tr>
+    <tr><th>שם</th><th>טלפון</th><th>קורס</th><th>סכום</th><th>תאריך</th><th>אמצעי</th></tr>
     ${purchases.map(p=>`<tr>
-      <td dir="ltr" style="cursor:pointer" onclick="openLead('${p.lead_phone}')">${p.lead_phone}</td>
-      <td>${p.course_name}</td>
+      <td style="cursor:pointer;color:var(--green-dark);font-weight:600" onclick="openLead('${escapeHtml(p.lead_phone)}')">${escapeHtml(p.lead_name||'—')}</td>
+      <td dir="ltr" style="cursor:pointer" onclick="openLead('${escapeHtml(p.lead_phone)}')">${escapeHtml(p.lead_phone)}</td>
+      <td>${escapeHtml(p.course_name)}</td>
       <td style="font-weight:600;color:var(--green)">${p.amount}₪</td>
       <td>${fmtShortDate(p.purchased_at)}</td>
-      <td>${p.payment_method}</td>
+      <td>${escapeHtml(p.payment_method)}</td>
     </tr>`).join('')}
   </table>` : '<div class="empty-state"><div class="icon">🛒</div><p>אין רכישות עדיין</p></div>';
 }

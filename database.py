@@ -425,7 +425,19 @@ def get_purchases(lead_phone: str = "") -> list[dict]:
         params["lead_phone"] = f"eq.{lead_phone}"
     r = httpx.get(_url("purchases"), headers=_get_headers(), params=params)
     r.raise_for_status()
-    return r.json()
+    purchases = r.json()
+    # Enrich with lead names
+    phones = list({p.get("lead_phone", "") for p in purchases if p.get("lead_phone")})
+    if phones:
+        leads_r = httpx.get(_url("leads"), headers=_get_headers(), params={
+            "select": "phone,name",
+            "phone": f"in.({','.join(phones)})",
+        })
+        leads_r.raise_for_status()
+        name_map = {l["phone"]: l.get("name", "") for l in leads_r.json()}
+        for p in purchases:
+            p["lead_name"] = name_map.get(p.get("lead_phone", ""), "")
+    return purchases
 
 
 # ── Dashboard Stats ────────────────────────────────────────────────
