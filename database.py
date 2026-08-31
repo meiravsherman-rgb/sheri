@@ -315,6 +315,11 @@ def upsert_lead_from_message(phone: str, name: str, source: str | None = None, t
         if tags is not None:
             data["tags"] = tags
         httpx.post(_url("leads"), headers=_get_headers(), json=data).raise_for_status()
+        # Log new lead event for highlights
+        try:
+            log_lead_event(phone, "new_lead", {"name": name or "", "source": source or ""})
+        except Exception:
+            pass
 
 
 def get_leads(status: str = "", search: str = "", tag: str = "") -> list[dict]:
@@ -520,6 +525,54 @@ def get_dashboard_stats() -> dict:
         "top_courses": [{"name": n, "revenue": r} for n, r in top_courses],
         "needs_attention": needs_attention,
     }
+
+
+def get_highlights() -> list[dict]:
+    """Get recent important events for dashboard highlights.
+
+    Returns events from last 3 days OR last 10, whichever is more.
+    Event types: purchase, new_lead, handoff.
+    """
+    from datetime import timedelta
+    three_days_ago = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+
+    # Fetch last 3 days
+    r = httpx.get(_url("lead_events"), headers=_get_headers(), params={
+        "select": "*",
+        "event_type": "in.(purchase,new_lead,handoff)",
+        "created_at": f"gte.{three_days_ago}",
+        "order": "created_at.desc",
+    })
+    r.raise_for_status()
+    events = r.json()
+
+    # If less than 10, fetch more
+    if len(events) < 10:
+        r2 = httpx.get(_url("lead_events"), headers=_get_headers(), params={
+            "select": "*",
+            "event_type": "in.(purchase,new_lead,handoff)",
+            "order": "created_at.desc",
+            "limit": "10",
+        })
+        r2.raise_for_status()
+        events = r2.json()
+
+    # Enrich with lead names
+    phones = list({e.get("lead_phone", "") for e in events if e.get("lead_phone")})
+    name_map = {}
+    if phones:
+        lr = httpx.get(_url("leads"), headers=_get_headers(), params={
+            "select": "phone,name",
+            "phone": f"in.({','.join(phones)})",
+        })
+        lr.raise_for_status()
+        name_map = {l["phone"]: l.get("name", "") for l in lr.json()}
+
+    for e in events:
+        e["lead_name"] = name_map.get(e.get("lead_phone", ""), "")
+        e["lead_phone_display"] = display_phone(e.get("lead_phone", ""))
+
+    return events
 
 
 # ── CRM Settings ──────────────────────────────────────────────────

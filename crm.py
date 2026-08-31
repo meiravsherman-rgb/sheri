@@ -233,6 +233,12 @@ async def api_update_settings(req: SettingUpdate):
     return {"ok": True}
 
 
+@router.get("/api/highlights", dependencies=[Depends(check_auth)])
+async def api_highlights():
+    from database import get_highlights
+    return get_highlights()
+
+
 # ── HTML Page ──────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
@@ -491,6 +497,12 @@ a { color: inherit; text-decoration: none; }
 .purchases-table th { padding: 10px 12px; text-align: right; font-size: 11px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); }
 .purchases-table td { padding: 13px 12px; border-bottom: 1px solid var(--border-2); font-size: 13.5px; font-weight: 600; }
 
+/* Highlights section */
+.row.r-1 { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
+.highlight-icon { font-size: 18px; margin-inline-end: 10px; }
+.highlight-text { flex: 1; font-size: 13px; line-height: 1.5; }
+.highlight-text b { font-weight: 700; }
+
 /* Toast */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--ink); color: #fff; padding: 10px 24px; border-radius: 14px; z-index: 200; font-size: 13px; font-weight: 700; box-shadow: var(--shadow-lg); transition: transform .3s cubic-bezier(.4,0,.2,1); }
 .toast.visible { transform: translateX(-50%) translateY(0); }
@@ -558,6 +570,9 @@ a { color: inherit; text-decoration: none; }
     <div class="row r-2">
       <div class="panel"><div class="panel-h"><h3>פולואפים קרובים</h3></div><div id="followupsList"></div></div>
       <div class="panel"><div class="panel-h"><h3>דורשות תשומת לב</h3></div><div id="attentionList"></div></div>
+    </div>
+    <div class="row r-1">
+      <div class="panel"><div class="panel-h"><h3>פעולות אחרונות</h3></div><div id="highlightsList"></div></div>
     </div>
   </div>
 
@@ -902,6 +917,28 @@ async function loadDashboard() {
   document.getElementById('attentionList').innerHTML = (d.needs_attention||[]).map(l=>
     `<div class="list-item" onclick="openLead('${escapeHtml(l.phone)}')"><span class="name">${escapeHtml(l.name||l.phone)}</span><span class="attention-badge">לא פעילה 7+ ימים</span></div>`
   ).join('') || '<div class="empty-state"><div class="icon">✅</div><p>הכל מעודכן</p></div>';
+
+  // Highlights
+  const highlights = await apiFetch('/highlights');
+  if (highlights) {
+    document.getElementById('highlightsList').innerHTML = highlights.length ? highlights.map(e => {
+      const data = typeof e.event_data === 'string' ? JSON.parse(e.event_data || '{}') : (e.event_data || {});
+      const name = escapeHtml(e.lead_name || e.lead_phone_display || '');
+      const phone = escapeHtml(e.lead_phone_display || '');
+      let icon = '', text = '';
+      if (e.event_type === 'purchase') {
+        icon = '💰';
+        text = '<b>' + name + '</b> רכשה "' + escapeHtml(data.course || '') + '" — ' + (data.amount || '') + '₪';
+      } else if (e.event_type === 'new_lead') {
+        icon = '👤';
+        text = 'ליד חדש: <b>' + name + '</b> (' + phone + ')';
+      } else if (e.event_type === 'handoff') {
+        icon = '🔄';
+        text = 'העברה למירב: <b>' + name + '</b>' + (data.reason ? ' — "' + escapeHtml(data.reason) + '"' : '');
+      }
+      return '<div class="list-item" style="cursor:pointer" onclick="openLead(' + "'" + phone + "'" + ')"><span class="highlight-icon">' + icon + '</span><span class="highlight-text">' + text + '</span><span class="meta">' + fmtDate(e.created_at) + '</span></div>';
+    }).join('') : '<div class="empty-state"><div class="icon">📌</div><p>אין פעולות אחרונות</p></div>';
+  }
 }
 
 // Activity indicator based on last_contact
