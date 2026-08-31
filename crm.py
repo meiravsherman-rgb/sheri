@@ -204,9 +204,25 @@ async def api_courses_list():
             for c in get_all_courses() if c.get("is_active")]
 
 
+def _get_distinct_lead_statuses() -> set[str]:
+    """Get all distinct status values from leads table."""
+    leads = get_leads()
+    return {l.get("status") for l in leads if l.get("status")}
+
+
 @router.get("/api/settings", dependencies=[Depends(check_auth)])
 async def api_get_settings():
-    return get_crm_settings()
+    s = get_crm_settings()
+    # Merge any lead statuses not in settings (e.g. "לקוחה" set by Cardcom webhook)
+    existing_keys = {st.get("key") for st in (s.get("statuses") or [])}
+    distinct_statuses = _get_distinct_lead_statuses()
+    for status_key in distinct_statuses:
+        if status_key and status_key not in existing_keys:
+            s.setdefault("statuses", []).append({
+                "key": status_key, "label": status_key,
+                "color": "#95a5a6", "order": len(s.get("statuses", [])) + 1
+            })
+    return s
 
 
 @router.post("/api/settings", dependencies=[Depends(check_auth)])
