@@ -1408,7 +1408,7 @@ async function loadWhatsApp() {
     const msgTime = lastMsg ? fmtDate(lastMsg.created_at) : fmtDate(c.last_contact);
     const displayName = escapeHtml(c.name || c.phone_display);
     const displayPhone = escapeHtml(c.phone_display);
-    return '<div class="wa-item" onclick="openWaChat(' + "'" + displayPhone + "','" + displayName + "'" + ')">'
+    return '<div class="wa-item" data-phone="' + displayPhone + '" data-name="' + displayName + '" onclick="openWaChat(this.dataset.phone, this.dataset.name)">'
       + '<div class="wa-avatar" style="background:' + getAvatarColor(c.name) + '">' + escapeHtml(getInitials(c.name)) + '</div>'
       + '<div class="wa-info"><div class="wa-name">' + displayName + '</div><div class="wa-last-msg">' + msgPreview + '</div></div>'
       + '<div class="wa-time">' + msgTime + '</div>'
