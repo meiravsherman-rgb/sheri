@@ -353,6 +353,11 @@ def update_lead(phone: str, **fields) -> None:
     httpx.patch(_url("leads"), headers=_get_headers(), params={"phone": f"eq.{phone}"}, json=fields).raise_for_status()
 
 
+def delete_lead(phone: str) -> None:
+    phone = normalize_phone(phone)
+    httpx.delete(_url("leads"), headers=_get_headers(), params={"phone": f"eq.{phone}"}).raise_for_status()
+
+
 def add_tag_to_lead(phone: str, tag: str) -> None:
     """Add a tag to a lead's tags array if not already present."""
     phone = normalize_phone(phone)

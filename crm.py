@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request, Response, Depends, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from database import (
-    get_leads, get_lead, update_lead, create_lead_manual,
+    get_leads, get_lead, update_lead, create_lead_manual, delete_lead,
     log_lead_event, get_lead_timeline, get_lead_conversations,
     create_purchase, get_purchases, get_dashboard_stats,
     get_all_courses, get_crm_settings, update_crm_setting,
@@ -46,6 +46,7 @@ class LeadUpdate(BaseModel):
     notes: str | None = None
     next_followup: str | None = None
     name: str | None = None
+    email: str | None = None
     conversation_summary: str | None = None
     followup_stopped: bool | None = None
 
@@ -119,6 +120,15 @@ async def api_update_lead(phone: str, req: LeadUpdate):
     return {"ok": True}
 
 
+@router.delete("/api/leads/{phone}", dependencies=[Depends(check_auth)])
+async def api_delete_lead(phone: str):
+    old = get_lead(phone)
+    if not old:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    delete_lead(phone)
+    return {"ok": True}
+
+
 @router.post("/api/leads", dependencies=[Depends(check_auth)])
 async def api_create_lead(req: NewLead):
     create_lead_manual(req.phone, req.name, req.source)
@@ -141,10 +151,10 @@ async def api_export_csv():
     leads = _leads_display(get_leads())
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["phone", "name", "status", "source", "tags", "notes", "first_contact", "last_contact", "total_paid"])
+    writer.writerow(["phone", "name", "email", "status", "source", "tags", "notes", "first_contact", "last_contact", "total_paid"])
     for l in leads:
         writer.writerow([
-            l.get("phone", ""), l.get("name", ""), l.get("status", ""),
+            l.get("phone", ""), l.get("name", ""), l.get("email", ""), l.get("status", ""),
             l.get("source", ""), ",".join(l.get("tags") or []), l.get("notes", ""),
             l.get("first_contact", ""), l.get("last_contact", ""), l.get("total_paid", 0),
         ])
@@ -446,6 +456,8 @@ a { color: inherit; text-decoration: none; }
 .dr-head h2 { font-size: 20px; font-weight: 900; }
 .dr-head .meta { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .dr-head .mchip { background: rgba(255,255,255,.18); font-size: 11.5px; font-weight: 700; padding: 5px 11px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; }
+.dr-head .mchip.wa-link { font-size: 14px; font-weight: 800; padding: 6px 13px; background: rgba(255,255,255,.28); color: #fff; text-decoration: none; cursor: pointer; transition: background .15s; }
+.dr-head .mchip.wa-link:hover { background: rgba(255,255,255,.4); }
 .dr-body { padding: 20px; }
 .dr-tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--border); }
 .dr-tabs button { padding: 12px 16px; font-size: 13px; font-weight: 700; color: var(--muted); border-bottom: 2px solid transparent; transition: .18s; }
@@ -756,6 +768,13 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Build a wa.me link from a displayed 05x phone number
+function waLink(phone) {
+  const digits = (phone||'').replace(/\\D/g,'');
+  const intl = digits.startsWith('0') ? '972'+digits.slice(1) : digits;
+  return 'https://wa.me/'+intl;
+}
+
 // Auth
 function togglePassView() {
   var inp = document.getElementById('loginPass');
@@ -1026,12 +1045,13 @@ async function loadLeads() {
   document.getElementById('leadsTable').innerHTML = leads.length ? `<table>
     <tr>
       <th style="width:30px"><input type="checkbox" onchange="toggleAllLeads(this,${JSON.stringify(leads.map(l=>l.phone)).replace(/"/g,'&quot;')})"></th>
-      <th>שם</th><th>טלפון</th><th>סטטוס</th><th>דיוור</th><th>תגיות</th><th>פעילות</th><th>אחרון</th><th>פולואפ</th>
+      <th>שם</th><th>טלפון</th><th>אימייל</th><th>סטטוס</th><th>דיוור</th><th>תגיות</th><th>פעילות</th><th>אחרון</th><th>פולואפ</th>
     </tr>
     ${leads.map(l=>`<tr onclick="openLead('${escapeHtml(l.phone)}')">
       <td onclick="event.stopPropagation()"><input type="checkbox" value="${escapeHtml(l.phone)}" onchange="toggleLeadSelect(this)"></td>
       <td><div class="lead-name-cell"><div class="lead-row-avatar" style="background:${getAvatarColor(l.name)}">${escapeHtml(getInitials(l.name))}</div>${escapeHtml(l.name||'—')}</div></td>
       <td dir="ltr">${escapeHtml(l.phone)}</td>
+      <td dir="ltr" style="color:var(--muted);font-size:12.5px">${escapeHtml(l.email||'—')}</td>
       <td><span class="status-badge" style="background:${getStatusColor(l.status)}20;color:${getStatusColor(l.status)}">${escapeHtml(getStatusLabel(l.status))}</span></td>
       <td><span style="font-size:.75rem;padding:2px 8px;border-radius:12px;${l.opt_in_marketing?'background:#e8f5e9;color:#2e7d32':(l.opt_in_date||l.opt_out_date?'background:#fce4ec;color:#c62828':'background:#fff3e0;color:#e65100')}">${l.opt_in_marketing?'V':(l.opt_in_date||l.opt_out_date?'X':'?')}</span></td>
       <td>${(l.tags||[]).map(t=>`<span class="tag" style="background:${getTagColor(t)}20;color:${getTagColor(t)}">${escapeHtml(t)}</span>`).join('')}</td>
@@ -1089,20 +1109,21 @@ async function openLead(phone) {
       <div class="dav" style="background:rgba(255,255,255,.2)">${escapeHtml(getInitials(lead.name))}</div>
       <h2>${escapeHtml(lead.name||lead.phone)}</h2>
       <div class="meta">
-        <span class="mchip" style="direction:ltr">${escapeHtml(lead.phone)}</span>
+        <a class="mchip wa-link" href="${waLink(lead.phone)}" target="_blank" rel="noopener" style="direction:ltr" title="פתח שיחה בוואטסאפ">💬 ${escapeHtml(lead.phone)}</a>
         <span class="mchip" style="background:${getStatusColor(lead.status)}40">${escapeHtml(getStatusLabel(lead.status))}</span>
         ${lead.lead_score ? '<span class="mchip">ניקוד: '+lead.lead_score+'</span>' : ''}
+        <span class="mchip" style="cursor:pointer;background:rgba(220,53,69,.35)" data-phone="${escapeHtml(phone)}" data-name="${escapeHtml(lead.name||lead.phone)}" onclick="deleteLead(this.dataset.phone,this.dataset.name)" title="מחיקת ליד">🗑 מחיקה</span>
       </div>
     </div>
     <div class="dr-tabs">
-      <button class="active" onclick="showDrawerTab(this,'dtab-details')">פרטים</button>
+      <button class="active" onclick="showDrawerTab(this,'dtab-chat')">שיחה (${convos?.length||0})</button>
+      <button onclick="showDrawerTab(this,'dtab-details')">פרטים</button>
       <button onclick="showDrawerTab(this,'dtab-timeline')">ציר זמן (${timeline?.length||0})</button>
-      <button onclick="showDrawerTab(this,'dtab-chat')">שיחה (${convos?.length||0})</button>
       <button onclick="showDrawerTab(this,'dtab-purchases')">רכישות (${purchases?.length||0})</button>
     </div>
     <div class="dr-body">
       <!-- Details tab -->
-      <div id="dtab-details">
+      <div id="dtab-details" style="display:none">
         <div class="dr-card">
           <h4>פרטי ליד</h4>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1123,6 +1144,10 @@ async function openLead(phone) {
               <input value="${lead.name||''}" onblur="updateField('${phone}','name',this.value)">
             </div>
             <div class="field-group">
+              <label>אימייל</label>
+              <input type="email" dir="ltr" value="${lead.email||''}" onblur="updateField('${phone}','email',this.value)">
+            </div>
+            <div class="field-group" style="grid-column:1/-1">
               <label>פולואפ הבא</label>
               <input type="datetime-local" value="${lead.next_followup?lead.next_followup.slice(0,16):''}" onchange="updateField('${phone}','next_followup',this.value?new Date(this.value).toISOString():null)">
             </div>
@@ -1171,7 +1196,7 @@ async function openLead(phone) {
       </div>
 
       <!-- Chat tab -->
-      <div id="dtab-chat" style="display:none">
+      <div id="dtab-chat">
         ${lead.ai_summary ? '<div class="dr-card" style="border-right:3px solid var(--cold);margin-bottom:12px"><h4>סיכום AI (אוטומטי)</h4><p style="font-size:13px;line-height:1.5;font-weight:600">'+escapeHtml(lead.ai_summary)+'</p></div>' : ''}
         <div class="field-group" style="margin-bottom:14px">
           <label style="font-weight:700;color:var(--green-dark)">הערות שלי על השיחה</label>
@@ -1213,6 +1238,14 @@ async function updateField(phone, field, value) {
   else body[field] = value;
   await apiFetch(`/leads/${phone}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   toast('עודכן!');
+}
+
+async function deleteLead(phone, name) {
+  if (!confirm(`למחוק לצמיתות את ${name}? הפעולה לא ניתנת לביטול.`)) return;
+  await apiFetch(`/leads/${phone}`, {method:'DELETE'});
+  toast('הליד נמחק');
+  closeDrawer();
+  loadLeads();
 }
 
 async function toggleTag(el, phone, tag, color) {
